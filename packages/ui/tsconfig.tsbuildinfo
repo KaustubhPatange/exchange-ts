@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/api.ts","./src/main.tsx","./src/store.ts","./src/vite-env.d.ts","./src/components/balances.tsx","./src/components/candlestickchart.tsx","./src/components/matchlog.tsx","./src/components/orderbook.tsx","./src/components/orderform.tsx","./src/components/priceticker.tsx","./src/components/tradetape.tsx"],"version":"5.9.3"}

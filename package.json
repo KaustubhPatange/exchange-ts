@@ -1,0 +1,22 @@
+{
+  "name": "exchange-ts",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "dev": "concurrently -n engine,ledger,gateway,marketdata,mm1,mm2,ui -c yellow,green,cyan,magenta,blue,blue,white \"pnpm --filter engine dev\" \"pnpm --filter ledger dev\" \"pnpm --filter gateway dev\" \"pnpm --filter marketdata dev\" \"pnpm --filter mm-bot dev:mm1\" \"pnpm --filter mm-bot dev:mm2\" \"pnpm --filter ui dev\"",
+    "redis:up": "docker compose up -d redis",
+    "redis:down": "docker compose down",
+    "redis:reset": "docker compose down -v && docker compose up -d redis"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1",
+    "typescript": "^5.6.2"
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  }
+}

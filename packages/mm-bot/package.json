@@ -1,0 +1,23 @@
+{
+  "name": "@exchange/mm-bot",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev:mm1": "BOT_NAME=mm1 API_KEY=key_mm1 SPREAD_USDC=20 SIZE_BTC=0.5 REFRESH_MS=2000 SEED_PRICE=67000 tsx watch src/index.ts",
+    "dev:mm2": "BOT_NAME=mm2 API_KEY=key_mm2 SPREAD_USDC=40 SIZE_BTC=1.0 REFRESH_MS=3000 SEED_PRICE=67000 tsx watch src/index.ts",
+    "dev:mm3": "BOT_NAME=mm3 API_KEY=key_mm3 SPREAD_USDC=80 SIZE_BTC=2.0 REFRESH_MS=5000 SEED_PRICE=67000 tsx watch src/index.ts"
+  },
+  "dependencies": {
+    "@exchange/common": "workspace:*",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.4",
+    "@types/ws": "^8.5.12",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2"
+  }
+}
