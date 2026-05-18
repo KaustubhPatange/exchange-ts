@@ -49,17 +49,20 @@ input, select {
 
 .app {
   display: grid;
-  grid-template-columns: 320px 1fr 320px;
-  grid-template-rows: 80px 1fr 240px;
+  grid-template-columns: 320px 1fr 340px;
+  grid-template-rows: 80px 1fr 200px 200px;
   grid-template-areas:
-    "ticker chart    form"
-    "book   chart    balances"
-    "log    log      log";
+    "ticker chart  form"
+    "book   chart  form"
+    "book   tape   balances"
+    "log    log    log";
   gap: 8px;
   padding: 8px;
-  height: 100vh;
+  min-height: 100vh;
   min-width: 1100px;
 }
+
+.tape-panel { grid-area: tape; }
 
 .panel {
   background: var(--panel);
@@ -113,7 +116,7 @@ input, select {
 .book .spread { text-align: center; color: var(--muted); padding: 8px 0; border-top: 1px dashed var(--border); border-bottom: 1px dashed var(--border); }
 
 .form { grid-area: form; }
-.form .body { display: flex; flex-direction: column; gap: 8px; }
+.form .body { display: flex; flex-direction: column; gap: 10px; padding: 12px; }
 .form .side-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
 .form .field label { color: var(--muted); display: block; margin-bottom: 4px; }
 .form .row { display: flex; gap: 6px; align-items: center; }

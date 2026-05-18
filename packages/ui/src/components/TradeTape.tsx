@@ -4,7 +4,7 @@ import type { AppState } from '../store';
 export function TradeTape({ state }: { state: AppState }) {
   const recent = [...state.trades].reverse().slice(0, 30);
   return (
-    <div className="panel">
+    <div className="panel tape-panel">
       <h3>Recent trades</h3>
       <div className="body">
         <table className="tape">

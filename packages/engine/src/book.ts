@@ -1,5 +1,13 @@
-import BTree from 'sorted-btree';
+import BTreeImport from 'sorted-btree';
 import type { Order, Side } from '@exchange/common';
+
+// sorted-btree is CJS; under Node's native ESM loader the default import
+// sometimes resolves to the module namespace object rather than the class.
+// vitest's transform hides this; Node does not. Normalize once here.
+const BTree = (
+  (BTreeImport as unknown as { default?: typeof BTreeImport }).default ??
+  BTreeImport
+) as typeof BTreeImport;
 
 /**
  * Order book data structure.

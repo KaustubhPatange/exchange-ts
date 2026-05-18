@@ -28,7 +28,7 @@ export interface AppState {
   trades: Trade[];
   candles1m: Candle[];
   candles5m: Candle[];
-  candleInterval: '1m' | '5m';
+  candleInterval: '1m' | '5m' | 'live';
   ticker: Ticker | null;
   prevLastPrice: number | null;
   balances: Balances | null;
@@ -50,7 +50,7 @@ type Action =
   | { type: 'set_candles'; interval: '1m' | '5m'; candles: Candle[] }
   | { type: 'candle_update'; interval: '1m' | '5m'; candle: Candle }
   | { type: 'candle_close'; interval: '1m' | '5m'; candle: Candle }
-  | { type: 'set_interval'; interval: '1m' | '5m' }
+  | { type: 'set_interval'; interval: '1m' | '5m' | 'live' }
   | { type: 'set_ticker'; ticker: Ticker }
   | { type: 'set_balances'; balances: Balances }
   | { type: 'log'; entry: LogEntry };

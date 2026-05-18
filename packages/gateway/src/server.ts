@@ -185,17 +185,18 @@ async function main(): Promise<void> {
     }
   });
 
+  // Caller has already established whether this is the first/last subscriber
+  // for the channel — these just do the redis-side subscribe/unsubscribe.
   async function ensureRedisSub(gwChannel: string): Promise<void> {
     const redisCh = CHANNEL_MAP[gwChannel];
-    if (!redisCh) return;
-    const subSet = subscribers.get(gwChannel);
-    if (!subSet || subSet.size === 0) await sub.subscribe(redisCh);
+    if (redisCh) {
+      await sub.subscribe(redisCh);
+      console.log(`[gateway] subscribed to ${redisCh}`);
+    }
   }
   async function maybeUnsub(gwChannel: string): Promise<void> {
     const redisCh = CHANNEL_MAP[gwChannel];
-    if (!redisCh) return;
-    const subSet = subscribers.get(gwChannel);
-    if (!subSet || subSet.size === 0) await sub.unsubscribe(redisCh);
+    if (redisCh) await sub.unsubscribe(redisCh);
   }
 
   app.get('/ws', { websocket: true }, (socket: WebSocket) => {

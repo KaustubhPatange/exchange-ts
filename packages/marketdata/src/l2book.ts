@@ -1,4 +1,4 @@
-import type { EngineEvent, Order, Side } from '@exchange/common';
+import type { EngineEvent, Side } from '@exchange/common';
 
 /**
  * L2 (level-2) book aggregator.
@@ -7,10 +7,20 @@ import type { EngineEvent, Order, Side } from '@exchange/common';
  * only the TOTAL QTY at each price level on each side. That's what
  * traders typically see in an exchange's depth chart.
  *
- * Driven entirely by engine events. We use the same submission-boundary
- * trick as the engine replayer: stash a pending order on OrderAccepted,
- * then on the next submission boundary decide whether it ended up
- * resting and should be added to the L2 totals.
+ * Update rules:
+ *   - OrderAccepted: pre-add the full qty at the order's (side, price).
+ *     For MARKET orders (price = 0) we skip — they cannot rest.
+ *   - Trade: reduce BOTH sides — the maker's level by qty (the maker is
+ *     resting on the book) AND the taker's level by qty (we pre-added
+ *     it on OrderAccepted, so we need to take back the part that just
+ *     matched, leaving only the unfilled remainder visible at the
+ *     taker's limit price).
+ *   - OrderCanceled: remove the order's REMAINING qty from its level.
+ *     Works for both user-cancels (resting orders) and terminal cancels
+ *     (IOC remainder, STP, MARKET_NO_LIQUIDITY).
+ *
+ * This makes the L2 reflect the user's order the instant the engine
+ * accepts it — no waiting for a "next submission" boundary.
  */
 
 export interface L2Delta {
@@ -24,51 +34,56 @@ export interface L2Snapshot {
   asks: [string, string][];
 }
 
+interface TrackedOrder {
+  side: Side;
+  price: bigint;          // 0n for MARKET (never adds to a level)
+  remaining: bigint;
+}
+
 export class L2Book {
-  /** side -> price -> totalQty */
   private readonly bids = new Map<bigint, bigint>();
   private readonly asks = new Map<bigint, bigint>();
-  /** orderId -> { side, price, remaining } for orders currently on the book */
-  private readonly orders = new Map<string, { side: Side; price: bigint; remaining: bigint }>();
+  private readonly orders = new Map<string, TrackedOrder>();
 
-  private pending: Order | null = null;
-  private pendingCanceled = false;
-
-  /** Returns deltas the publisher should push out. */
   apply(ev: EngineEvent): L2Delta[] {
     switch (ev.kind) {
       case 'OrderAccepted': {
-        const flushDeltas = this.flushPending();
-        this.pending = { ...ev.order };
-        this.pendingCanceled = false;
-        return flushDeltas;
+        const o = ev.order;
+        this.orders.set(o.orderId, {
+          side: o.side,
+          price: o.price,
+          remaining: o.qty,
+        });
+        // MARKET orders never rest. Don't put them in the depth view.
+        if (o.type === 'MARKET' || o.price === 0n) return [];
+        return [this.applyLevelDelta(o.side, o.price, o.qty)];
       }
-      case 'OrderRejected': {
-        return this.flushPending();
-      }
+      case 'OrderRejected':
+        return [];
       case 'Trade': {
         const deltas: L2Delta[] = [];
-        // The maker is on the book — reduce its level.
         const maker = this.orders.get(ev.makerOrderId);
         if (maker) {
           maker.remaining -= ev.qty;
           if (maker.remaining <= 0n) this.orders.delete(ev.makerOrderId);
           deltas.push(this.applyLevelDelta(maker.side, maker.price, -ev.qty));
         }
-        // The taker may be the pending order (this submission). Track its remaining.
-        if (this.pending && this.pending.orderId === ev.takerOrderId) {
-          this.pending.remaining -= ev.qty;
+        const taker = this.orders.get(ev.takerOrderId);
+        if (taker) {
+          taker.remaining -= ev.qty;
+          if (taker.remaining <= 0n) this.orders.delete(ev.takerOrderId);
+          // taker.price is 0 for MARKET — those were never added to a level.
+          if (taker.price > 0n) {
+            deltas.push(this.applyLevelDelta(taker.side, taker.price, -ev.qty));
+          }
         }
         return deltas;
       }
       case 'OrderCanceled': {
-        if (this.pending && this.pending.orderId === ev.orderId) {
-          this.pendingCanceled = true;
-          return [];
-        }
         const existing = this.orders.get(ev.orderId);
         if (!existing) return [];
         this.orders.delete(ev.orderId);
+        if (existing.price === 0n) return []; // MARKET, never added
         return [this.applyLevelDelta(existing.side, existing.price, -existing.remaining)];
       }
     }
@@ -79,25 +94,6 @@ export class L2Book {
       bids: topN(this.bids, 'desc', levels),
       asks: topN(this.asks, 'asc', levels),
     };
-  }
-
-  private flushPending(): L2Delta[] {
-    if (
-      !this.pending ||
-      this.pendingCanceled ||
-      this.pending.remaining <= 0n ||
-      !(this.pending.type === 'LIMIT' || this.pending.type === 'POST_ONLY')
-    ) {
-      this.pending = null;
-      this.pendingCanceled = false;
-      return [];
-    }
-    const o = this.pending;
-    this.orders.set(o.orderId, { side: o.side, price: o.price, remaining: o.remaining });
-    const delta = this.applyLevelDelta(o.side, o.price, o.remaining);
-    this.pending = null;
-    this.pendingCanceled = false;
-    return [delta];
   }
 
   private applyLevelDelta(side: Side, price: bigint, deltaQty: bigint): L2Delta {
@@ -116,7 +112,9 @@ function topN(
   n: number
 ): [string, string][] {
   const sorted = [...m.entries()].sort((a, b) =>
-    order === 'asc' ? (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0) : a[0] < b[0] ? 1 : a[0] > b[0] ? -1 : 0
+    order === 'asc'
+      ? a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0
+      : a[0] < b[0] ? 1 : a[0] > b[0] ? -1 : 0
   );
   return sorted.slice(0, n).map(([p, q]) => [p.toString(), q.toString()]);
 }
