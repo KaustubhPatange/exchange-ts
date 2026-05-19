@@ -135,14 +135,8 @@ async function quoteCycle(): Promise<void> {
   log(`quoted mid=${mid.toFixed(2)} bid=${bidPrice.toFixed(2)} ask=${askPrice.toFixed(2)}`);
 }
 
-function applySnapshot(snap: { bids: [string, string][]; asks: [string, string][] }): void {
-  top.bestBid = snap.bids[0] ? priceFromBase(snap.bids[0][0]) : null;
-  top.bestAsk = snap.asks[0] ? priceFromBase(snap.asks[0][0]) : null;
-}
-
-// L2 delta updates: { side, price, qty }. qty='0' means level removed.
-// We only need top-of-book maintenance; just refresh on every delta by
-// keeping a lightweight tracker.
+// We only need top-of-book maintenance; full L2 maps let us know the
+// next-best when a level disappears.
 const bids = new Map<number, number>();
 const asks = new Map<number, number>();
 
@@ -155,6 +149,13 @@ function refreshTopFromMaps(): void {
   top.bestAsk = ba;
 }
 
+function loadSnapshot(snap: { bids: [string, string][]; asks: [string, string][] }): void {
+  bids.clear(); asks.clear();
+  for (const [p, q] of snap.bids) bids.set(priceFromBase(p), Number(BigInt(q)) / 1e8);
+  for (const [p, q] of snap.asks) asks.set(priceFromBase(p), Number(BigInt(q)) / 1e8);
+  refreshTopFromMaps();
+}
+
 function applyDelta(d: { side: 'buy' | 'sell'; price: string; qty: string }): void {
   const price = priceFromBase(d.price);
   const qty = Number(BigInt(d.qty)) / 1e8;
@@ -165,15 +166,9 @@ function applyDelta(d: { side: 'buy' | 'sell'; price: string; qty: string }): vo
 }
 
 async function bootstrap(): Promise<void> {
-  // Initial REST snapshot via gateway → marketdata
   try {
     const res = await fetch(`${GATEWAY_URL}/api/snapshot`);
-    const snap = (await res.json()) as { bids: [string, string][]; asks: [string, string][] };
-    applySnapshot(snap);
-    bids.clear(); asks.clear();
-    for (const [p, q] of snap.bids) bids.set(priceFromBase(p), Number(BigInt(q)) / 1e8);
-    for (const [p, q] of snap.asks) asks.set(priceFromBase(p), Number(BigInt(q)) / 1e8);
-    refreshTopFromMaps();
+    loadSnapshot(await res.json() as { bids: [string, string][]; asks: [string, string][] });
   } catch (err) {
     log('snapshot fetch failed:', (err as Error).message);
   }
@@ -191,11 +186,7 @@ function connectWS(): void {
       if (msg.channel === 'book') {
         applyDelta(msg.data as { side: 'buy' | 'sell'; price: string; qty: string });
       } else if (msg.channel === 'book:snapshot') {
-        const snap = msg.data as { bids: [string, string][]; asks: [string, string][] };
-        bids.clear(); asks.clear();
-        for (const [p, q] of snap.bids) bids.set(priceFromBase(p), Number(BigInt(q)) / 1e8);
-        for (const [p, q] of snap.asks) asks.set(priceFromBase(p), Number(BigInt(q)) / 1e8);
-        refreshTopFromMaps();
+        loadSnapshot(msg.data as { bids: [string, string][]; asks: [string, string][] });
       }
     } catch { /* ignore parse errors */ }
   });

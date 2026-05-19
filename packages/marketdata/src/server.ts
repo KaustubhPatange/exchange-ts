@@ -18,7 +18,6 @@ const ONE_MIN_MS = 60_000;
 const FIVE_MIN_MS = 5 * ONE_MIN_MS;
 
 async function main(): Promise<void> {
-  const sub = new IORedis(REDIS_URL, { maxRetriesPerRequest: null });
   const pub = new IORedis(REDIS_URL, { maxRetriesPerRequest: null });
   const cmd = new IORedis(REDIS_URL, { maxRetriesPerRequest: null });
 
@@ -173,7 +172,7 @@ async function main(): Promise<void> {
   const shutdown = async (sig: string): Promise<void> => {
     console.log(`[marketdata] ${sig} — shutting down`);
     await app.close();
-    await Promise.all([sub.quit(), pub.quit(), cmd.quit()]);
+    await Promise.all([pub.quit(), cmd.quit()]);
     process.exit(0);
   };
   process.on('SIGINT', () => void shutdown('SIGINT'));

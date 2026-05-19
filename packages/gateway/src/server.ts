@@ -117,7 +117,7 @@ async function main(): Promise<void> {
 
     let reservation: { asset: 'BTC' | 'USDC'; amount: bigint };
     try {
-      reservation = reserveForOrder(body.side, body.type, price, qty);
+      reservation = reserveForOrder(body.side, price, qty);
     } catch (err) {
       reply.code(400);
       return { error: (err as Error).message };

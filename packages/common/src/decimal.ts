@@ -28,13 +28,11 @@ export function toBaseUnits(value: string | number, decimals: number): bigint {
   const s = typeof value === 'number' ? value.toString() : value;
   const neg = s.startsWith('-');
   const body = neg ? s.slice(1) : s;
-  const [intPartRaw, fracPartRaw = ''] = body.split('.');
-  const intPart = intPartRaw ?? '0';
+  const [intPart, fracPartRaw = ''] = body.split('.') as [string, string?];
   if (fracPartRaw.length > decimals) {
     throw new Error(`too many decimals for value ${value} (max ${decimals})`);
   }
-  const frac = fracPartRaw.padEnd(decimals, '0');
-  const result = BigInt(intPart + frac);
+  const result = BigInt(intPart + fracPartRaw.padEnd(decimals, '0'));
   return neg ? -result : result;
 }
 

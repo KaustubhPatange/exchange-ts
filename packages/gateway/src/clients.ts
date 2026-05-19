@@ -4,7 +4,6 @@ import {
   USDC_DECIMALS,
   BTC_DECIMALS,
   type Asset,
-  type OrderType,
   type Side,
 } from '@exchange/common';
 
@@ -25,16 +24,10 @@ export function parseQtyDecimal(s: string): bigint {
 
 export function reserveForOrder(
   side: Side,
-  type: OrderType,
   price: bigint | undefined,
   qty: bigint
 ): { asset: Asset; amount: bigint } {
-  if (type === 'MARKET') {
-    // Engine-level MARKET orders are not exposed via the gateway (see plan);
-    // the UI converts them to aggressive IOC orders with a price cap.
-    throw new Error('MARKET orders are not supported by the gateway in v1');
-  }
-  if (price === undefined) throw new Error('price required for non-MARKET orders');
+  if (price === undefined) throw new Error('price required');
   if (side === 'buy') return { asset: 'USDC', amount: notionalQuote(price, qty) };
   return { asset: 'BTC', amount: qty };
 }

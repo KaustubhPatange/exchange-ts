@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef } from 'react';
+import { useEffect, useReducer } from 'react';
 import {
   WS_URL,
   baseUnitsToPrice, baseUnitsToQty,
@@ -142,31 +142,28 @@ export const USERS: { apiKey: string; userId: string }[] = [
 
 export function useExchangeStore() {
   const [state, dispatch] = useReducer(reducer, initialState(USERS[0]!.apiKey, USERS[0]!.userId));
-  const wsRef = useRef<WebSocket | null>(null);
 
-  // Initial bootstrap: snapshot, trades, candles, ticker, balances.
+  // Initial bootstrap: snapshot, trades, candles, ticker. Balances are
+  // fetched by the apiKey effect below.
   useEffect(() => {
     void (async () => {
       try {
-        const [snap, trades, c1, c5, ticker, balances] = await Promise.all([
+        const [snap, trades, c1, c5, ticker] = await Promise.all([
           getSnapshot(),
           getTrades(50),
           getCandles('1m', 300),
           getCandles('5m', 300),
           getTicker(),
-          getBalances(state.apiKey),
         ]);
         dispatch({ type: 'set_snapshot', snap });
         dispatch({ type: 'set_trades', trades });
         dispatch({ type: 'set_candles', interval: '1m', candles: c1.candles });
         dispatch({ type: 'set_candles', interval: '5m', candles: c5.candles });
         dispatch({ type: 'set_ticker', ticker });
-        dispatch({ type: 'set_balances', balances });
       } catch (err) {
         console.error('bootstrap failed', err);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Balances refresh whenever user changes or every 2s.
@@ -185,11 +182,13 @@ export function useExchangeStore() {
 
   // WebSocket subscription.
   useEffect(() => {
-    const connect = () => {
-      const ws = new WebSocket(WS_URL);
-      wsRef.current = ws;
+    let active = true;
+    let ws: WebSocket | null = null;
+    const connect = (): void => {
+      if (!active) return;
+      ws = new WebSocket(WS_URL);
       ws.onopen = () => {
-        ws.send(JSON.stringify({
+        ws?.send(JSON.stringify({
           type: 'subscribe',
           channels: ['book', 'book:snapshot', 'trades', 'ticker', 'candles:1m', 'candles:5m', 'events'],
         }));
@@ -232,13 +231,15 @@ export function useExchangeStore() {
         } catch { /* ignore */ }
       };
       ws.onclose = () => {
-        wsRef.current = null;
-        setTimeout(connect, 1500);
+        if (active) setTimeout(connect, 1500);
       };
-      ws.onerror = () => { ws.close(); };
+      ws.onerror = () => { ws?.close(); };
     };
     connect();
-    return () => { wsRef.current?.close(); };
+    return () => {
+      active = false;
+      ws?.close();
+    };
   }, []);
 
   return { state, dispatch };
