@@ -21,7 +21,7 @@ export function OrderForm({ state, onUserChange }: { state: AppState; onUserChan
     try {
       const t = overrides?.type ?? type;
       const p = t === 'IOC' && side === 'buy' && bestAsk
-        ? (bestAsk * 1.05).toFixed(2)
+        ? (bestAsk * 1.01).toFixed(2)
         : price;
       const result = await placeOrder(state.apiKey, {
         symbol: 'BTC-USDC',
@@ -81,7 +81,7 @@ export function OrderForm({ state, onUserChange }: { state: AppState; onUserChan
           {side === 'buy' ? 'Place BUY' : 'Place SELL'}
         </button>
         <button onClick={() => void submit({ type: 'IOC' })} style={{ marginTop: -4 }}>
-          Market {side === 'buy' ? 'BUY' : 'SELL'} (IOC w/ 5% slip cap)
+          Market {side === 'buy' ? 'BUY' : 'SELL'} (IOC w/ 1% slip cap)
         </button>
         {feedback && <div className="help">{feedback}</div>}
       </div>
