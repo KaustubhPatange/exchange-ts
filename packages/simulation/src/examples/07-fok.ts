@@ -12,8 +12,8 @@ import {
 import type { Example } from '../registry.js';
 
 export const example: Example = {
-  id: '02-fok',
-  title: '2 · FOK (Fill-Or-Kill)',
+  id: '07-fok',
+  title: '7 · FOK (Fill-Or-Kill)',
   summary: 'All-or-nothing: rejected outright if insufficient liquidity; the reservation is released.',
 
   async run({ alice, bob, gary, josh, system }) {

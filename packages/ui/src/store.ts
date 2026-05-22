@@ -1,9 +1,9 @@
-import { useEffect, useReducer } from 'react';
+import { useEffect, useReducer, useRef } from 'react';
 import {
   WS_URL,
   baseUnitsToPrice, baseUnitsToQty,
-  getCandles, getSnapshot, getTicker, getTrades, getBalances,
-  type Candle, type Trade, type Ticker, type Balances, type Snapshot,
+  getCandles, getSnapshot, getTicker, getTrades, getBalances, getOpenOrders,
+  type Candle, type Trade, type Ticker, type Balances, type Snapshot, type OpenOrder,
 } from './api';
 
 /**
@@ -32,6 +32,7 @@ export interface AppState {
   ticker: Ticker | null;
   prevLastPrice: number | null;
   balances: Balances | null;
+  openOrders: OpenOrder[];
   log: LogEntry[];
 }
 
@@ -53,7 +54,9 @@ type Action =
   | { type: 'set_interval'; interval: '1m' | '5m' | 'live' }
   | { type: 'set_ticker'; ticker: Ticker }
   | { type: 'set_balances'; balances: Balances }
-  | { type: 'log'; entry: LogEntry };
+  | { type: 'set_open_orders'; orders: OpenOrder[] }
+  | { type: 'log'; entry: LogEntry }
+  | { type: 'reset' };
 
 const initialState = (apiKey: string, userId: string): AppState => ({
   apiKey, userId,
@@ -64,6 +67,7 @@ const initialState = (apiKey: string, userId: string): AppState => ({
   ticker: null,
   prevLastPrice: null,
   balances: null,
+  openOrders: [],
   log: [],
 });
 
@@ -125,11 +129,25 @@ function reducer(state: AppState, action: Action): AppState {
     }
     case 'set_balances':
       return { ...state, balances: action.balances };
+    case 'set_open_orders':
+      return { ...state, openOrders: action.orders };
     case 'log': {
       const log = [action.entry, ...state.log];
       if (log.length > 200) log.pop();
       return { ...state, log };
     }
+    case 'reset':
+      return {
+        ...state,
+        book: { bids: new Map(), asks: new Map() },
+        trades: [],
+        candles1m: [],
+        candles5m: [],
+        ticker: null,
+        prevLastPrice: null,
+        openOrders: [],
+        log: [],
+      };
   }
 }
 
@@ -143,6 +161,13 @@ export const USERS: { apiKey: string; userId: string }[] = [
 
 export function useExchangeStore() {
   const [state, dispatch] = useReducer(reducer, initialState(USERS[0]!.apiKey, USERS[0]!.userId));
+  // Refs let the long-lived WS handler read the *current* user/apiKey
+  // without rebuilding the socket on every switch.
+  const apiKeyRef = useRef(state.apiKey);
+  const userIdRef = useRef(state.userId);
+  apiKeyRef.current = state.apiKey;
+  userIdRef.current = state.userId;
+  const refreshOpenOrders = useRef<() => void>(() => undefined);
 
   // Initial bootstrap: snapshot, trades, candles, ticker. Balances are
   // fetched by the apiKey effect below.
@@ -179,6 +204,28 @@ export function useExchangeStore() {
     void tick();
     const id = setInterval(() => void tick(), 2000);
     return () => { cancelled = true; clearInterval(id); };
+  }, [state.apiKey]);
+
+  // Open orders: fetch on user switch and expose a debounced refresher used
+  // by the WS handler (to react to events) and components (after a cancel).
+  useEffect(() => {
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const fetchNow = async () => {
+      try {
+        const orders = await getOpenOrders(apiKeyRef.current);
+        if (!cancelled) dispatch({ type: 'set_open_orders', orders });
+      } catch { /* ignore */ }
+    };
+    refreshOpenOrders.current = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => void fetchNow(), 80);
+    };
+    void fetchNow();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
   }, [state.apiKey]);
 
   // WebSocket subscription.
@@ -225,7 +272,15 @@ export function useExchangeStore() {
             }
             case 'events': {
               const ev = env.data as { kind: string; seq?: number } & Record<string, unknown>;
+              if (ev.kind === 'Reset') {
+                dispatch({ type: 'reset' });
+                refreshOpenOrders.current();
+                break;
+              }
               dispatch({ type: 'log', entry: { ts: Date.now(), kind: ev.kind, text: formatEvent(ev) } });
+              if (eventAffectsUser(ev, userIdRef.current)) {
+                refreshOpenOrders.current();
+              }
               break;
             }
           }
@@ -243,7 +298,24 @@ export function useExchangeStore() {
     };
   }, []);
 
-  return { state, dispatch };
+  return { state, dispatch, refreshOpenOrders: () => refreshOpenOrders.current() };
+}
+
+function eventAffectsUser(ev: { kind: string } & Record<string, unknown>, userId: string): boolean {
+  const any = ev as Record<string, unknown>;
+  switch (ev.kind) {
+    case 'OrderAccepted': {
+      const o = any.order as { userId?: string } | undefined;
+      return o?.userId === userId;
+    }
+    case 'OrderRejected':
+    case 'OrderCanceled':
+      return any.userId === userId;
+    case 'Trade':
+      return any.takerUserId === userId || any.makerUserId === userId;
+    default:
+      return false;
+  }
 }
 
 function formatEvent(ev: { kind: string } & Record<string, unknown>): string {

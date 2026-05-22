@@ -50,10 +50,11 @@ input, select {
 .app {
   display: grid;
   grid-template-columns: 320px 1fr 340px;
-  grid-template-rows: 80px 1fr 200px 200px;
+  grid-template-rows: 80px 1fr 200px 200px 200px;
   grid-template-areas:
     "ticker chart  form"
     "book   chart  form"
+    "book   tape   orders"
     "book   tape   balances"
     "log    log    log";
   gap: 8px;
@@ -127,6 +128,16 @@ input, select {
 .balances td { padding: 6px; font-variant-numeric: tabular-nums; }
 .balances .asset { color: var(--muted); }
 .balances .num { text-align: right; }
+
+.orders { grid-area: orders; }
+.orders table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.orders th, .orders td { padding: 4px 6px; font-size: 12px; }
+.orders thead td { color: var(--muted); border-bottom: 1px solid var(--border); }
+.orders .num { text-align: right; }
+.orders .buy { color: var(--buy); font-weight: 600; }
+.orders .sell { color: var(--sell); font-weight: 600; }
+.orders button { padding: 2px 8px; font-size: 11px; }
+.orders .empty { color: var(--muted); padding: 8px 4px; font-size: 12px; }
 
 .log { grid-area: log; }
 .log .body { font-family: 'SF Mono', Menlo, Consolas, monospace; font-size: 11px; line-height: 1.5; }

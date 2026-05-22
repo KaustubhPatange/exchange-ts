@@ -94,3 +94,19 @@ export async function cancelOrder(apiKey: string, orderId: string): Promise<unkn
   });
   return r.json();
 }
+
+export interface OpenOrder {
+  orderId: string;
+  side: 'buy' | 'sell';
+  type: string;
+  price: string;       // base units (string)
+  qty: string;
+  remaining: string;
+  createdAt: number;
+}
+
+export async function getOpenOrders(apiKey: string): Promise<OpenOrder[]> {
+  const r = await fetch(`${GATEWAY}/api/orders`, { headers: { 'x-api-key': apiKey } });
+  const j = (await r.json()) as { orders?: OpenOrder[] };
+  return j.orders ?? [];
+}

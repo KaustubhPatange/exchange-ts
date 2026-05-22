@@ -1,4 +1,5 @@
 import {
+  BTC_ONE,
   notionalQuote,
   type Asset,
   type EngineEvent,
@@ -27,11 +28,23 @@ export type SettlerMode = 'replay' | 'live';
 export const TAKER_FEE_BPS = 5n;  // 0.05%; maker fee is 0 in v1
 
 export class Settler {
+  // Tracks resting/active BUY orders so we can release over-reservation
+  // when a buy fills below its limit price (price improvement) and clean
+  // up the entry when the order is fully consumed or canceled. We only
+  // need to track buys because seller reservations are sized in BTC (qty
+  // only — no price involved) so they can't be over-reserved.
+  private readonly openBuys = new Map<string, { price: bigint; remaining: bigint }>();
+
   constructor(private readonly accounts: Accounts) {}
+
+  clear(): void {
+    this.openBuys.clear();
+  }
 
   apply(ev: EngineEvent, mode: SettlerMode): void {
     switch (ev.kind) {
       case 'OrderAccepted':
+        this.trackOrder(ev);
         if (mode === 'replay') this.lockForOrder(ev);
         return;
       case 'OrderRejected':
@@ -41,7 +54,15 @@ export class Settler {
         return;
       case 'OrderCanceled':
         this.releaseRemainder(ev);
+        this.openBuys.delete(ev.orderId);
         return;
+    }
+  }
+
+  private trackOrder(ev: OrderAcceptedEvent): void {
+    const o = ev.order;
+    if (o.side === 'buy' && o.type !== 'MARKET') {
+      this.openBuys.set(o.orderId, { price: o.price, remaining: o.qty });
     }
   }
 
@@ -81,6 +102,28 @@ export class Settler {
     if (sellerFeeUsdc > 0n) {
       this.accounts.ensureUser('exchange').get('USDC')!.free += sellerFeeUsdc;
     }
+
+    // Price improvement: if the buyer is the taker and the fill price is
+    // below their limit, release the per-qty surplus that was locked at the
+    // higher limit price. Maker buys fill at their own resting price, so
+    // they never have surplus.
+    if (ev.aggressor === 'buy') {
+      const taker = this.openBuys.get(ev.takerOrderId);
+      if (taker && taker.price > ev.price) {
+        const surplus = ((taker.price - ev.price) * ev.qty) / BTC_ONE;
+        if (surplus > 0n) this.accounts.release(ev.takerUserId, 'USDC', surplus);
+      }
+      this.decrementOpenBuy(ev.takerOrderId, ev.qty);
+    } else {
+      this.decrementOpenBuy(ev.makerOrderId, ev.qty);
+    }
+  }
+
+  private decrementOpenBuy(orderId: string, qty: bigint): void {
+    const entry = this.openBuys.get(orderId);
+    if (!entry) return;
+    entry.remaining -= qty;
+    if (entry.remaining <= 0n) this.openBuys.delete(orderId);
   }
 
   private releaseRemainder(ev: OrderCanceledEvent): void {

@@ -165,6 +165,21 @@ export class OrderBook {
     return this.refs.get(orderId)?.node.order;
   }
 
+  /** All resting orders owned by a user across both sides, in price order. */
+  ordersForUser(userId: string): Order[] {
+    const out: Order[] = [];
+    for (const tree of [this.bids, this.asks]) {
+      for (const [, level] of tree.entries()) {
+        let node = level.head;
+        while (node) {
+          if (node.order.userId === userId) out.push(node.order);
+          node = node.next;
+        }
+      }
+    }
+    return out;
+  }
+
   /** Snapshot of top-N depth for a side: [price, totalQty][]. */
   depth(side: Side, levels: number): [bigint, bigint][] {
     const tree = side === 'buy' ? this.bids : this.asks;

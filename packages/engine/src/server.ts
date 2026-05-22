@@ -94,6 +94,28 @@ async function main(): Promise<void> {
     };
   });
 
+  app.get('/orders', async (req, reply) => {
+    const userId = (req.query as { userId?: string }).userId;
+    if (!userId) {
+      reply.code(400);
+      return { error: 'missing userId' };
+    }
+    const orders = state.engine.getUserOrders(userId).map((o) => ({
+      orderId: o.orderId,
+      clientOrderId: o.clientOrderId,
+      userId: o.userId,
+      symbol: o.symbol,
+      side: o.side,
+      type: o.type,
+      price: o.price.toString(),
+      qty: o.qty.toString(),
+      remaining: o.remaining.toString(),
+      status: o.status,
+      createdAt: o.createdAt,
+    }));
+    return { orders };
+  });
+
   app.post('/orders', async (req, reply): Promise<PlaceOrderResponse> => {
     if (resetting) {
       reply.code(503);
@@ -133,6 +155,11 @@ async function main(): Promise<void> {
         await redis.del(STREAM_KEY);
         state.engine = new MatchingEngine();
         state.log = new EventLog(redis, STREAM_KEY);
+        // Tell live WS subscribers (e.g. the UI) to drop accumulated state.
+        // This is a sentinel — not a real engine event — and downstream stream
+        // consumers (ledger/marketdata) don't read it because we DEL'd the
+        // stream and they only act on XREAD payloads, not pub/sub fanout.
+        await redis.publish(`${STREAM_KEY}.live`, JSON.stringify({ kind: 'Reset', ts: Date.now() }));
         console.log('[engine] /admin/reset — book + stream cleared');
         return { ok: true, seq: 0 };
       } finally {

@@ -151,6 +151,109 @@ describe('Settler.releaseRemainder on cancel', () => {
   });
 });
 
+describe('Settler price improvement', () => {
+  it('releases over-reservation when a buy taker fills below its limit', () => {
+    // Gateway-style: gary reserves at his $70k limit for 1 BTC = 70k USDC.
+    const limit = PRICE(70_000);
+    const fill = PRICE(69_000);
+    const reserved = notionalQuote(limit, QTY(1));
+    acc.reserve('gary', 'USDC', reserved);
+    acc.reserve('alice', 'BTC', QTY(1));
+
+    // Settler must see OrderAccepted FIRST to learn gary's limit price.
+    settler.apply(
+      {
+        kind: 'OrderAccepted', seq: 1, ts: 0,
+        order: order({
+          orderId: 'OG', clientOrderId: 'cG', userId: 'gary',
+          side: 'buy', type: 'LIMIT', price: limit, qty: QTY(1), remaining: QTY(1),
+        }),
+      },
+      'live'
+    );
+
+    settler.apply(
+      {
+        kind: 'Trade', seq: 2, ts: 0, tradeId: 'T1', symbol: 'BTC-USDC',
+        price: fill, qty: QTY(1), aggressor: 'buy',
+        takerOrderId: 'OG', takerUserId: 'gary', takerOrderType: 'LIMIT',
+        makerOrderId: 'OA', makerUserId: 'alice',
+      },
+      'live'
+    );
+
+    const g = acc.snapshot('gary');
+    expect(g.USDC.locked).toBe(0n);
+    // Gary spent the actual fill notional, not the over-reserved limit notional.
+    expect(g.USDC.free).toBe(INITIAL_BALANCES.USDC - notionalQuote(fill, QTY(1)));
+  });
+
+  it('does not release surplus for a maker buy filled at its own price', () => {
+    // Alice is a resting BUY @ $69k; bob aggresses SELL.
+    const price = PRICE(69_000);
+    const reserved = notionalQuote(price, QTY(1));
+    acc.reserve('alice', 'USDC', reserved);
+    acc.reserve('bob', 'BTC', QTY(1));
+
+    settler.apply(
+      {
+        kind: 'OrderAccepted', seq: 1, ts: 0,
+        order: order({
+          orderId: 'OA', clientOrderId: 'cA', userId: 'alice',
+          side: 'buy', type: 'LIMIT', price, qty: QTY(1), remaining: QTY(1),
+        }),
+      },
+      'live'
+    );
+
+    settler.apply(
+      {
+        kind: 'Trade', seq: 2, ts: 0, tradeId: 'T1', symbol: 'BTC-USDC',
+        price, qty: QTY(1), aggressor: 'sell',
+        takerOrderId: 'OB', takerUserId: 'bob', takerOrderType: 'LIMIT',
+        makerOrderId: 'OA', makerUserId: 'alice',
+      },
+      'live'
+    );
+
+    const a = acc.snapshot('alice');
+    expect(a.USDC.locked).toBe(0n);
+    expect(a.USDC.free).toBe(INITIAL_BALANCES.USDC - reserved);
+  });
+
+  it('replay reconstructs balances correctly when buy fills below limit', () => {
+    const limit = PRICE(70_000);
+    const fill = PRICE(69_000);
+    const events: EngineEvent[] = [
+      {
+        kind: 'OrderAccepted', seq: 1, ts: 0,
+        order: order({
+          orderId: 'OA', clientOrderId: 'cA', userId: 'alice',
+          side: 'sell', type: 'LIMIT', price: fill, qty: QTY(1), remaining: QTY(1),
+        }),
+      },
+      {
+        kind: 'OrderAccepted', seq: 2, ts: 0,
+        order: order({
+          orderId: 'OG', clientOrderId: 'cG', userId: 'gary',
+          side: 'buy', type: 'LIMIT', price: limit, qty: QTY(1), remaining: QTY(1),
+        }),
+      },
+      {
+        kind: 'Trade', seq: 3, ts: 0, tradeId: 'T1', symbol: 'BTC-USDC',
+        price: fill, qty: QTY(1), aggressor: 'buy',
+        takerOrderId: 'OG', takerUserId: 'gary', takerOrderType: 'LIMIT',
+        makerOrderId: 'OA', makerUserId: 'alice',
+      },
+    ];
+    for (const ev of events) settler.apply(ev, 'replay');
+
+    const g = acc.snapshot('gary');
+    expect(g.USDC.locked).toBe(0n);
+    expect(g.USDC.free).toBe(INITIAL_BALANCES.USDC - notionalQuote(fill, QTY(1)));
+  });
+});
+
 describe('Settler in replay mode (full event sequence)', () => {
   it('reconstructs balances from OrderAccepted + Trade events', () => {
     // Simulate: alice buys 1 BTC @ $100 from bob (alice taker, fully filled)

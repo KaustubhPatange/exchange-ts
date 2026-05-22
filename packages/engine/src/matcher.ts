@@ -201,6 +201,14 @@ export class MatchingEngine {
     return [this.makeCanceled(removed, now, 'USER')];
   }
 
+  /**
+   * Open resting orders for a user. O(N) over the book — fine for a learning
+   * project at small scale; would want a per-user index in production.
+   */
+  getUserOrders(userId: string): Order[] {
+    return this.book.ordersForUser(userId);
+  }
+
   // ---------- Helpers ----------
 
   private wouldCross(order: Order): boolean {

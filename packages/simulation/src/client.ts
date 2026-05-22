@@ -204,17 +204,22 @@ export class ExchangeClient {
     private readonly baseUrl: string = DEFAULT_GATEWAY
   ) {}
 
-  private headers(extra: Record<string, string> = {}): Record<string, string> {
-    const h: Record<string, string> = { 'content-type': 'application/json', ...extra };
+  private headers(hasBody: boolean, extra: Record<string, string> = {}): Record<string, string> {
+    const h: Record<string, string> = { ...extra };
+    // Only declare a JSON content-type when we actually send a body —
+    // Fastify rejects empty-body requests that announce application/json
+    // with FST_ERR_CTP_EMPTY_JSON_BODY.
+    if (hasBody) h['content-type'] = 'application/json';
     if (this.apiKey) h['x-api-key'] = this.apiKey;
     return h;
   }
 
   private async req<T>(method: string, path: string, body?: unknown): Promise<T> {
+    const hasBody = body !== undefined;
     const res = await fetch(`${this.baseUrl}${path}`, {
       method,
-      headers: this.headers(),
-      body: body === undefined ? undefined : JSON.stringify(body),
+      headers: this.headers(hasBody),
+      body: hasBody ? JSON.stringify(body) : undefined,
     });
     if (!res.ok && res.status !== 400 && res.status !== 402) {
       throw new Error(`${method} ${path} → HTTP ${res.status}: ${await res.text()}`);

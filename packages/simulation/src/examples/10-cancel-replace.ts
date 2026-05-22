@@ -11,8 +11,8 @@ import {
 import type { Example } from '../registry.js';
 
 export const example: Example = {
-  id: '12-cancel-replace',
-  title: '12 · Cancel & replace',
+  id: '10-cancel-replace',
+  title: '10 · Cancel & replace',
   summary: 'How to "move" a resting order — there is no native modify, so cancel + re-post.',
 
   async run({ alice, system }) {
@@ -53,7 +53,11 @@ export const example: Example = {
         '  • Your TIME PRIORITY at the new level starts fresh — you go to the back of the queue.\n' +
         '  • Funds momentarily unlock and re-lock, which matters if you have other open orders.\n' +
         'Real MM systems batch these calls and accept the tiny window. Some exchanges offer\n' +
-        'amend-down operations that preserve time priority on quantity reductions.',
+        'amend-down operations that preserve time priority on quantity reductions.\n' +
+        '\n' +
+        'In the UI: the "Open orders" panel below "Place order" lists your resting orders\n' +
+        'and offers a Cancel button per row — reproduce this exact flow there by placing a\n' +
+        'LIMIT, clicking Cancel, then placing a new one at a different price.',
     );
   },
 };

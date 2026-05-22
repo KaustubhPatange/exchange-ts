@@ -94,6 +94,27 @@ export async function engineCancel(orderId: string, userId: string): Promise<Eng
   return (await res.json()) as EnginePlaceResponse;
 }
 
+export interface EngineOrdersResponse {
+  orders: Array<{
+    orderId: string;
+    clientOrderId: string;
+    userId: string;
+    symbol: string;
+    side: Side;
+    type: string;
+    price: string;
+    qty: string;
+    remaining: string;
+    status: string;
+    createdAt: number;
+  }>;
+}
+
+export async function engineListOrders(userId: string): Promise<EngineOrdersResponse> {
+  const res = await fetch(`${ENGINE_URL}/orders?userId=${encodeURIComponent(userId)}`);
+  return (await res.json()) as EngineOrdersResponse;
+}
+
 export async function mdSnapshot(): Promise<unknown> {
   const res = await fetch(`${MARKETDATA_URL}/snapshot`);
   return res.json();

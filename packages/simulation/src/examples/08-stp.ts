@@ -9,8 +9,8 @@ import {
 import type { Example } from '../registry.js';
 
 export const example: Example = {
-  id: '06-stp',
-  title: '6 · STP (Self-Trade Prevention)',
+  id: '08-stp',
+  title: '8 · STP (Self-Trade Prevention)',
   summary: 'A user cannot match against their own resting orders — the new side is canceled.',
 
   async run({ alice, system }) {

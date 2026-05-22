@@ -11,8 +11,8 @@ import {
 import type { Example } from '../registry.js';
 
 export const example: Example = {
-  id: '07-partial-limit',
-  title: '7 · LIMIT — partial fill, remainder rests',
+  id: '03-partial-limit',
+  title: '3 · LIMIT — partial fill, remainder rests',
   summary: 'When a LIMIT eats some but not all available liquidity, the unfilled qty rests at your price.',
 
   async run({ alice, bob, system }) {
@@ -20,7 +20,7 @@ export const example: Example = {
       'Partial fill — LIMIT',
       'You ask for more than the book can give RIGHT NOW. A LIMIT takes what it can at your\n' +
         'price-or-better, and the unfilled remainder REST at your limit price as a new top-of-book\n' +
-        'order. Contrast this with example #8 (IOC) where the remainder is canceled.',
+        'order. Contrast this with example #6 (IOC partial fill) where the remainder is canceled.',
     );
     await pause();
 

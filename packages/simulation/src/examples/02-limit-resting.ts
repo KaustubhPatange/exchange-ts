@@ -11,8 +11,8 @@ import {
 import type { Example } from '../registry.js';
 
 export const example: Example = {
-  id: '05-limit-resting',
-  title: '5 · LIMIT — resting on the book',
+  id: '02-limit-resting',
+  title: '2 · LIMIT — resting on the book',
   summary: 'A LIMIT order with no immediate match patiently waits for someone to cross it.',
 
   async run({ alice, bob, system }) {

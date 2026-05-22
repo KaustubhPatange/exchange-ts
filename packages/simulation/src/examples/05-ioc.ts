@@ -9,8 +9,8 @@ import {
 import type { Example } from '../registry.js';
 
 export const example: Example = {
-  id: '03-ioc',
-  title: '3 · IOC (Immediate-Or-Cancel)',
+  id: '05-ioc',
+  title: '5 · IOC (Immediate-Or-Cancel)',
   summary: 'Take what is available right now; cancel any unfilled remainder. Never rests.',
 
   async run({ alice, bob, system }) {

@@ -11,20 +11,19 @@ import {
 import type { Example } from '../registry.js';
 
 export const example: Example = {
-  id: '08-partial-ioc',
-  title: '8 · IOC — partial fill, remainder canceled',
-  summary: 'Same setup as example 7 but with IOC: the unfilled qty is canceled instead of resting.',
+  id: '06-partial-ioc',
+  title: '6 · IOC — partial fill, remainder canceled',
+  summary: 'Same setup as example 3 but with IOC: the unfilled qty is canceled instead of resting.',
 
   async run({ alice, bob, system }) {
     header(
       'Partial fill — IOC',
       'IOC = Immediate-Or-Cancel. The order takes what it can RIGHT NOW; anything that\n' +
-        'doesn\'t fill immediately is canceled with reason=IOC_REMAINDER. Notice how this\n' +
-        'differs from example #7: same inputs, different ending book.',
+        'doesn\'t fill immediately is canceled with reason=IOC_REMAINDER.',
     );
     await pause();
 
-    step('Step 1 — alice posts SELL 2 BTC @ $70,000', 'Identical to example 7.');
+    step('Step 1 — alice posts SELL 2 BTC @ $70,000', 'Identical to example 3.');
     await alice.place({ side: 'sell', type: 'LIMIT', price: '70000', qty: '2' });
 
     step('Step 2 — bob sends IOC BUY 5 BTC @ $70,000', 'Wants 5; only 2 are available; the other 3 must be canceled.');
@@ -45,7 +44,7 @@ export const example: Example = {
     step('Balances', renderBalances(bals));
     teach(
       'Bob got 2 BTC (minus fee) and his USDC reservation for the other 3 BTC was RELEASED\n' +
-        'when the IOC remainder was canceled. Compare to example #7: that one had 210,000 USDC\n' +
+        'when the IOC remainder was canceled. Compare to example #3: that one had 210,000 USDC\n' +
         'still locked. IOC = "no homework left for me; clean exit."',
     );
   },

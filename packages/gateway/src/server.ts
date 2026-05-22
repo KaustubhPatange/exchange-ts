@@ -7,7 +7,7 @@ import { resolveUser } from './auth.js';
 import {
   parsePriceDecimal, parseQtyDecimal,
   reserveForOrder, ledgerReserve, ledgerRelease, ledgerBalances,
-  enginePlace, engineCancel,
+  enginePlace, engineCancel, engineListOrders,
   mdSnapshot, mdTrades, mdCandles, mdTicker,
 } from './clients.js';
 
@@ -155,6 +155,15 @@ async function main(): Promise<void> {
     }
     const { orderId } = req.params as { orderId: string };
     return engineCancel(orderId, userId);
+  });
+
+  app.get('/api/orders', async (req, reply) => {
+    const userId = userIdFromReq(req);
+    if (!userId) {
+      reply.code(401);
+      return { error: 'missing or invalid X-API-Key' };
+    }
+    return engineListOrders(userId);
   });
 
   // ---------- WebSocket fan-out ----------

@@ -10,8 +10,8 @@ import {
 import type { Example } from '../registry.js';
 
 export const example: Example = {
-  id: '10-fees',
-  title: '10 · Fees — taker pays, maker is free',
+  id: '13-fees',
+  title: '13 · Fees — taker pays, maker is free',
   summary: 'Maker fee = 0 bps; taker fee = 5 bps. The order TYPE does not decide who pays.',
 
   async run({ alice, bob, resetAll }) {

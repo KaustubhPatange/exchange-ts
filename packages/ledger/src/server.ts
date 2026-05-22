@@ -130,6 +130,7 @@ async function main(): Promise<void> {
         consumerRedis.disconnect();
         await consumerPromise.catch(() => {});
         accounts.clear();
+        settler.clear();
         consumerRedis = new IORedis(REDIS_URL, { maxRetriesPerRequest: null });
         consumerPromise = startConsumer();
         consumerPromise.catch((err) => {

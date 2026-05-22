@@ -21,8 +21,8 @@ interface LiveTrade {
 }
 
 export const example: Example = {
-  id: '09-continuous-loop',
-  title: '9 · Continuous trading (~60 seconds)',
+  id: '14-continuous-loop',
+  title: '14 · Continuous trading (~60 seconds)',
   summary: 'Two MMs quote tightly, two takers cross occasionally — watch the candle and ticker form.',
 
   async run({ alice, bob, gary, josh }) {

@@ -10,8 +10,8 @@ import {
 import type { Example } from '../registry.js';
 
 export const example: Example = {
-  id: '14-price-improvement',
-  title: '14 · Price improvement',
+  id: '11-price-improvement',
+  title: '11 · Price improvement',
   summary: 'A taker who is willing to pay $70,000 ends up paying only $69,000 — the maker\'s price.',
 
   async run({ alice, gary }) {

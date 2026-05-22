@@ -9,8 +9,8 @@ import { btcStr, priceStr, type Snapshot } from '../client.js';
 import type { Example } from '../registry.js';
 
 export const example: Example = {
-  id: '13-depth-visualization',
-  title: '13 · Depth visualization',
+  id: '12-depth-visualization',
+  title: '12 · Depth visualization',
   summary: 'Stack multiple bids/asks across price levels and render an ASCII depth chart.',
 
   async run({ alice, bob, gary, josh, system }) {
