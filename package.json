@@ -8,6 +8,7 @@
     "test": "pnpm -r test",
     "dev": "EXCHANGE_ADMIN_ENABLED=1 concurrently -n engine,ledger,gateway,marketdata,ui -c yellow,green,cyan,magenta,white \"pnpm --filter engine dev\" \"pnpm --filter ledger dev\" \"pnpm --filter gateway dev\" \"pnpm --filter marketdata dev\" \"pnpm --filter ui dev\"",
     "simulation": "pnpm --filter @exchange/simulation start",
+    "reset": "pnpm --filter @exchange/simulation reset",
     "redis:up": "docker compose up -d redis",
     "redis:down": "docker compose down",
     "redis:reset": "docker compose down -v && docker compose up -d redis"

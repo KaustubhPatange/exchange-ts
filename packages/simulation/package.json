@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "start": "tsx src/index.ts"
+    "start": "tsx src/index.ts",
+    "reset": "tsx src/reset-cli.ts"
   },
   "dependencies": {
     "@exchange/common": "workspace:*",
