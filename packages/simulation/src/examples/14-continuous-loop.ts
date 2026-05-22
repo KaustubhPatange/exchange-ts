@@ -182,7 +182,18 @@ export const example: Example = {
         '  • `volume24h` accumulates BASE asset (BTC) traded over a rolling 24h window.\n' +
         '  • The 1m candles\' Open/High/Low/Close reflect the spread of taker activity.\n' +
         '  • Idle 1m buckets get a FLAT candle (volume=0, OHLC=carry close) — that\'s how the\n' +
-        '    chart keeps moving on the time axis even when nobody is trading.',
+        '    chart keeps moving on the time axis even when nobody is trading.\n' +
+        '\n' +
+        'What you just watched is a faithful sketch of how a real venue behaves at rest:\n' +
+        '  • Market makers continually re-quote a tight spread around their internal fair\n' +
+        '    value — cancel, replace, cancel, replace (see example 10). That churn is the\n' +
+        '    single largest contributor to message rates on real exchanges.\n' +
+        '  • Takers periodically cross to grab inventory or hedge a position elsewhere.\n' +
+        '  • Tape, candles, and ticker are passive PROJECTIONS of the resulting event\n' +
+        '    stream — the matching engine emits events; downstream services aggregate.\n' +
+        'Real venues run millions of these events per second instead of two — Nasdaq\n' +
+        'ITCH peaks at ~5M msg/s, Binance spot at ~1M/s — but the SHAPE is the same as\n' +
+        'what you saw here.',
     );
   },
 };

@@ -44,8 +44,26 @@ export const example: Example = {
         '  • The GAP in the middle is the spread. Best bid = $69,900, best ask = $70,000.\n' +
         '\n' +
         'To eat ALL asks (10 BTC), a buyer would pay the volume-weighted average price:\n' +
-        '  VWAP_ask = (1·70000 + 2·70100 + 3·70200 + 4·70300) / 10 = $70,180.\n' +
-        'That\'s $180 above the touch — the SLIPPAGE cost of size on this book.',
+        '  VWAP_ask = (1·70000 + 2·70100 + 3·70200 + 4·70300) / 10 = $70,200.\n' +
+        'That\'s $200 above the touch ($70,000) — the SLIPPAGE cost of size on this book.\n' +
+        '\n' +
+        'Slippage scales with the size you take. Walking deeper levels costs more per BTC:\n' +
+        '  Take BUY    Avg fill price    Slip vs touch\n' +
+        '    1 BTC      $70,000.00        $0        (0 bps)\n' +
+        '    3 BTC      $70,066.67        $66.67    (~10 bps)\n' +
+        '    6 BTC      $70,133.33        $133.33   (~19 bps)\n' +
+        '   10 BTC      $70,200.00        $200.00   (~29 bps)\n' +
+        '\n' +
+        'Why it matters:\n' +
+        '  • Slippage is an IMPLICIT cost — paid on top of the explicit taker fee, and\n' +
+        '    usually larger than the fee for any trade above a level\'s depth.\n' +
+        '  • Symmetric on the bid side: clearing 10 BTC as a market SELL through these\n' +
+        '    bids fills at VWAP $69,700 — $200 below the $69,900 touch.\n' +
+        '  • Liquidity = depth × tightness. A thick level at the touch absorbs size with\n' +
+        '    little impact; a thin one makes the same trade much more expensive.\n' +
+        '  • This is why "market" orders here are sent as IOC with a 1% slippage cap —\n' +
+        '    you set the WORST price you\'ll accept; the rest cancels rather than walking\n' +
+        '    deeper than you intended.',
     );
   },
 };

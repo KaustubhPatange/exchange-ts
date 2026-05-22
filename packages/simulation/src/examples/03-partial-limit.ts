@@ -45,7 +45,17 @@ export const example: Example = {
     teach(
       'Bob spent USDC for 2 BTC (minus fee), and 3 BTC × $70,000 = 210,000 USDC is STILL\n' +
         'LOCKED because his remaining 3 BTC bid is open. The exchange must keep that USDC\n' +
-        'on hand to honor the bid if a seller crosses it later.',
+        'on hand to honor the bid if a seller crosses it later.\n' +
+        '\n' +
+        'Real-world: this resting-the-remainder behavior is the default for LIMIT on every\n' +
+        'major venue. It\'s also the building block of ICEBERG orders — a strategy where a\n' +
+        'large trader hides size by posting only a small visible chunk, then auto-reposts\n' +
+        'the next chunk when it fills. Takers only ever see the tip; the rest lives off-\n' +
+        'book in the trader\'s system. This exchange doesn\'t have iceberg natively, but a\n' +
+        'cancel-and-repost loop (example 10) achieves the same effect.\n' +
+        '\n' +
+        'If you don\'t want a remainder to rest, see example 6 — same setup with IOC, which\n' +
+        'cancels the leftover instead.',
     );
   },
 };

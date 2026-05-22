@@ -54,6 +54,16 @@ export const example: Example = {
 
     const finalSnap = await system.snapshot();
     step('Order book after trade', renderBook(finalSnap));
-    teach('Bob\'s sell consumed. Alice\'s $70,000 ask and gary\'s $69,000 bid still rest.');
+    teach(
+      'Bob\'s sell consumed. Alice\'s $70,000 ask and gary\'s $69,000 bid still rest.\n' +
+        '\n' +
+        'Why the first print matters in the real world:\n' +
+        '  • Before it, `lastPrice` is null and the market is in "price discovery" — only\n' +
+        '    QUOTES exist, no agreed-upon reference.\n' +
+        '  • From this print onward, downstream systems (price oracles, mark-to-market for\n' +
+        '    derivatives, risk engines, indices) treat `lastPrice` as authoritative.\n' +
+        '  • This is why venues police suspicious activity around market open and around\n' +
+        '    illiquid asset launches — a single tiny print can move a billion-dollar mark.',
+    );
   },
 };

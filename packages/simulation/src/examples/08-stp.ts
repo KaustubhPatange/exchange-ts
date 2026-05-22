@@ -44,7 +44,20 @@ export const example: Example = {
     teach(
       'Important nuance: CANCEL-NEW only kills the part of the incoming order that would have\n' +
         'self-traded. If the order had matched OTHER users first and only then run into\n' +
-        'alice\'s own ask, those earlier trades would stand and only the rest is canceled.',
+        'alice\'s own ask, those earlier trades would stand and only the rest is canceled.\n' +
+        '\n' +
+        'STP policies vary across real venues — most expose multiple modes you can choose:\n' +
+        '  • CANCEL-NEW (ours)   — kill the incoming order, keep the resting one.\n' +
+        '  • CANCEL-RESTING      — kill the maker; the new order proceeds normally.\n' +
+        '  • CANCEL-BOTH         — both sides die. Strictest; favored by compliance teams.\n' +
+        '  • DECREMENT-AND-CANCEL — reduce both orders by the overlap qty (no trade).\n' +
+        'CME, Binance, Coinbase Advanced, OKX all let users select among these.\n' +
+        '\n' +
+        'Why this exists at all: a self-trade transfers no value but generates VOLUME and\n' +
+        'PRINTS — useful for faking activity ("wash trading") and for manipulating any\n' +
+        'index/oracle that reads from this venue\'s tape. Wash trading is banned by the\n' +
+        'SEC/CFTC and explicitly prohibited in every reputable venue rulebook, so the\n' +
+        'matching engine refuses to do it even when the user technically requests it.',
     );
   },
 };

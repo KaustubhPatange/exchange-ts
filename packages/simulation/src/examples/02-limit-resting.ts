@@ -52,7 +52,16 @@ export const example: Example = {
     teach(
       'Alice\'s LOCKED USDC dropped (it paid for the BTC she received). She gets +1 BTC.\n' +
         'Bob got +65,000 USDC for his 1 BTC, minus a 5-bps taker fee (0.05 BTC × $65,000 ≈\n' +
-        'see balances). Locked balances clear when the order fully fills.',
+        'see balances). Locked balances clear when the order fully fills.\n' +
+        '\n' +
+        'Real-world: LIMIT is the default order type on essentially every exchange. Here\n' +
+        'it behaves as "Good-Till-Canceled" (GTC) — it lives forever until you cancel or\n' +
+        'it fills. Bigger venues add time-in-force flags on top of LIMIT:\n' +
+        '  • DAY  — auto-cancel at session close (equities-style).\n' +
+        '  • GTD  — Good-Till-Date, expires at a chosen timestamp.\n' +
+        '  • IOC / FOK — covered in examples 5 and 7; they decline to rest at all.\n' +
+        'Every trading platform you\'ll touch starts from "LIMIT, GTC" and layers other\n' +
+        'flags on top.',
     );
   },
 };

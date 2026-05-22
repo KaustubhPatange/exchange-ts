@@ -59,7 +59,18 @@ export const example: Example = {
     step('Events emitted', renderEvents(r2.events));
     teach(
       'One incoming FOK produced TWO trades because liquidity was spread across two maker\n' +
-        'orders. FOK is atomic on the QUANTITY, not on the number of trades.',
+        'orders. FOK is atomic on the QUANTITY, not on the number of trades.\n' +
+        '\n' +
+        'Where FOK matters in the real world: institutional and OTC routing. Block trades,\n' +
+        'prime-broker aggregators, and multi-leg arbitrage strategies often demand atomic\n' +
+        'execution because being left with a PARTIAL fill creates new risk — you\'ve\n' +
+        'committed capital but the strategy can\'t complete, or you\'ve hedged one leg of a\n' +
+        'spread and the other leg moved away. Retail traders almost never need FOK; pros\n' +
+        'use it constantly.\n' +
+        '\n' +
+        'Trade-off: FOK rejects far more often than IOC, especially in thin books — the\n' +
+        'pre-check is unforgiving. A common pattern is "try FOK, fall back to IOC for the\n' +
+        'partial, then evaluate." This exchange exposes both so you can compose them.',
     );
   },
 };

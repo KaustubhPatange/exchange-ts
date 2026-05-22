@@ -59,7 +59,18 @@ export const example: Example = {
     step('Balances after Phase B', renderBalances(bB));
     teach(
       'Compare with Phase A: alice\'s USDC delta is the SAME ($70,000), bob\'s BTC delta is\n' +
-        'the SAME (0.99995 BTC). Order type didn\'t change the fee — being a taker did.',
+        'the SAME (0.99995 BTC). Order type didn\'t change the fee — being a taker did.\n' +
+        '\n' +
+        'This MAKER–TAKER model is the industry standard. Binance, Coinbase, Kraken, and\n' +
+        'most other venues charge TAKERS and charge MAKERS either zero, a much smaller\n' +
+        'fee, or even a maker REBATE (you get paid to provide liquidity). The economics\n' +
+        'are intentional: makers post and wait, takers consume — so the exchange\n' +
+        'subsidizes whoever fills the book.\n' +
+        '\n' +
+        'Practical takeaway: fee minimization is about ROLE, not order TYPE. To pay\n' +
+        'less, rest your orders (post a LIMIT inside the spread and wait) instead of\n' +
+        'crossing. A POST_ONLY can enforce this — it refuses to execute if it would\n' +
+        'cross, guaranteeing you stay on the maker side.',
     );
   },
 };

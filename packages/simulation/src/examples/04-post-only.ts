@@ -43,7 +43,16 @@ export const example: Example = {
     teach(
       'Best bid = $69,500 (bob, MAKER). Best ask = $70,000 (alice, MAKER).\n' +
         'POST_ONLY is the "I want to be paid to provide liquidity" toggle. Combined with the\n' +
-        '0-bps maker fee in this exchange, bob is now positioned to pay zero fees on any fills.',
+        '0-bps maker fee in this exchange, bob is now positioned to pay zero fees on any fills.\n' +
+        '\n' +
+        'Same flag, different names on real venues:\n' +
+        '  • Coinbase / Kraken Pro  — "Add Liquidity Only" (ALO) or "Post Only".\n' +
+        '  • Binance / Bybit / OKX  — "Post Only" / "Maker Only".\n' +
+        '  • CME / Eurex (futures)  — "ALO" or "Book or Cancel".\n' +
+        'Some venues go further and pay a maker REBATE — you receive a small fee instead of\n' +
+        'paying one — so POST_ONLY becomes a free-money toggle (until your quote gets\n' +
+        'adversely selected and you fill into a moving market). Professional market makers\n' +
+        'submit almost exclusively POST_ONLY for exactly this reason.',
     );
   },
 };

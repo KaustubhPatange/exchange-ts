@@ -45,7 +45,17 @@ export const example: Example = {
     teach(
       'Bob got 2 BTC (minus fee) and his USDC reservation for the other 3 BTC was RELEASED\n' +
         'when the IOC remainder was canceled. Compare to example #3: that one had 210,000 USDC\n' +
-        'still locked. IOC = "no homework left for me; clean exit."',
+        'still locked. IOC = "no homework left for me; clean exit."\n' +
+        '\n' +
+        'When to pick IOC over LIMIT in the real world:\n' +
+        '  • You want to TAKE liquidity opportunistically without ADVERTISING a quote\n' +
+        '    behind it. Resting a LIMIT signals to other traders what price you\'re\n' +
+        '    willing to pay; IOC leaves no trail.\n' +
+        '  • You\'re sweeping multiple venues in parallel for an arbitrage and need any\n' +
+        '    unfilled remainder to die cleanly — no residual exposure on any venue.\n' +
+        '  • You\'re algorithmically chunking a large parent order into many small IOC\n' +
+        '    "children"; each child either fills or disappears, and you decide whether\n' +
+        '    to retry. This is the foundation of TWAP/VWAP execution algorithms.',
     );
   },
 };

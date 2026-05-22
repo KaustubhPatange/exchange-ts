@@ -42,7 +42,15 @@ export const example: Example = {
     teach(
       'Compare with a LIMIT order: a LIMIT BUY @ $69,300 would have RESTED as the new top bid.\n' +
         'IOC said "no thanks, cancel me" instead. IOC is for taking liquidity opportunistically\n' +
-        'when you don\'t want to advertise a quote.',
+        'when you don\'t want to advertise a quote.\n' +
+        '\n' +
+        'Real-world: most retail "Market Buy / Market Sell" buttons (including this\n' +
+        'exchange\'s UI — see the OrderForm) are implemented as IOC under the hood, with a\n' +
+        'slippage cap on the limit price (here it\'s 1%). True MARKET orders — no price\n' +
+        'cap at all — are dangerous in thin books because they walk arbitrarily deep (see\n' +
+        'example 12 on slippage). IOC + slippage cap gives the same "fill now or skip"\n' +
+        'feel with a safety net. Many exchanges no longer expose unbounded MARKET orders\n' +
+        'to retail for exactly this reason.',
     );
   },
 };
