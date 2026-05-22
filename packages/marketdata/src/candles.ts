@@ -119,6 +119,11 @@ export class CandleAggregator {
     return this.onTrade(this.current.close, 0n, bucketStart);
   }
 
+  clear(): void {
+    this.current = null;
+    this.history.length = 0;
+  }
+
   /** Last N (closed + live) candles, oldest first. */
   recent(limit: number): Candle[] {
     const out: Candle[] = [];

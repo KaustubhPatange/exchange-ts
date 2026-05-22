@@ -89,6 +89,12 @@ export class L2Book {
     }
   }
 
+  clear(): void {
+    this.bids.clear();
+    this.asks.clear();
+    this.orders.clear();
+  }
+
   snapshot(levels: number = 50): L2Snapshot {
     return {
       bids: topN(this.bids, 'desc', levels),

@@ -137,7 +137,8 @@ function reducer(state: AppState, action: Action): AppState {
 export const USERS: { apiKey: string; userId: string }[] = [
   { apiKey: 'key_alice', userId: 'alice' },
   { apiKey: 'key_bob', userId: 'bob' },
-  { apiKey: 'key_user1', userId: 'user1' },
+  { apiKey: 'key_gary', userId: 'gary' },
+  { apiKey: 'key_josh', userId: 'josh' },
 ];
 
 export function useExchangeStore() {

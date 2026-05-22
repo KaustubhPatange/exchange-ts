@@ -78,6 +78,11 @@ export class Accounts {
     bal.free += amount;
   }
 
+  /** Wipe all balances. Used by /admin/reset. */
+  clear(): void {
+    this.balances.clear();
+  }
+
   /** Settle a fill: decrease locked of paid asset, increase free of received asset. */
   debitLockedCreditFree(
     userId: string,

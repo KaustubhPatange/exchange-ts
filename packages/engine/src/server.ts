@@ -14,6 +14,8 @@ import { EventLog, replayInto } from './eventLog.js';
 
 const PORT = Number(process.env.ENGINE_PORT ?? 8082);
 const REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6379';
+const ADMIN_ENABLED = process.env.EXCHANGE_ADMIN_ENABLED === '1';
+const STREAM_KEY = 'engine.events';
 
 // ---------- Wire types ----------
 
@@ -67,29 +69,36 @@ function eventsToJsonReadyArray(events: EngineEvent[]): unknown[] {
 
 async function main(): Promise<void> {
   const redis = new IORedis(REDIS_URL, { maxRetriesPerRequest: null });
-  const log = new EventLog(redis);
-  const engine = new MatchingEngine();
+  const state = {
+    engine: new MatchingEngine(),
+    log: new EventLog(redis, STREAM_KEY),
+  };
+  let resetting = false;
 
   const t0 = Date.now();
-  const lastSeq = await replayInto(engine, log);
+  const lastSeq = await replayInto(state.engine, state.log);
   console.log(
     `[engine] replayed ${lastSeq} events in ${Date.now() - t0}ms; ` +
-      `bestBid=${engine.book.bestBid() ?? '∅'} bestAsk=${engine.book.bestAsk() ?? '∅'}`
+      `bestBid=${state.engine.book.bestBid() ?? '∅'} bestAsk=${state.engine.book.bestAsk() ?? '∅'}`
   );
 
   const app = Fastify({ logger: false });
 
-  app.get('/healthz', async () => ({ ok: true, seq: engine.currentSeq() }));
+  app.get('/healthz', async () => ({ ok: true, seq: state.engine.currentSeq() }));
 
   app.get('/depth', async (req) => {
     const levels = Number((req.query as { levels?: string }).levels ?? 20);
     return {
-      bids: engine.book.depth('buy', levels).map(([p, q]) => [p.toString(), q.toString()]),
-      asks: engine.book.depth('sell', levels).map(([p, q]) => [p.toString(), q.toString()]),
+      bids: state.engine.book.depth('buy', levels).map(([p, q]) => [p.toString(), q.toString()]),
+      asks: state.engine.book.depth('sell', levels).map(([p, q]) => [p.toString(), q.toString()]),
     };
   });
 
   app.post('/orders', async (req, reply): Promise<PlaceOrderResponse> => {
+    if (resetting) {
+      reply.code(503);
+      return { events: [{ error: 'RESETTING' }] };
+    }
     let cmd: NewOrderCommand;
     try {
       cmd = toEnginePlaceCommand(req.body as PlaceOrderBody);
@@ -97,21 +106,40 @@ async function main(): Promise<void> {
       reply.code(400);
       return { events: [{ error: (err as Error).message }] };
     }
-    const events = engine.submit(cmd);
+    const events = state.engine.submit(cmd);
     // Persist BEFORE responding. If persistence fails, the client must retry
     // (clientOrderId makes that safe).
-    for (const ev of events) await log.append(ev);
+    for (const ev of events) await state.log.append(ev);
     return { events: eventsToJsonReadyArray(events) };
   });
 
-  app.delete('/orders/:orderId', async (req): Promise<PlaceOrderResponse> => {
+  app.delete('/orders/:orderId', async (req, reply): Promise<PlaceOrderResponse> => {
+    if (resetting) {
+      reply.code(503);
+      return { events: [{ error: 'RESETTING' }] };
+    }
     const params = req.params as { orderId: string };
     const query = req.query as CancelQuery;
     const cmd: CancelOrderCommand = { orderId: params.orderId, userId: query.userId };
-    const events = engine.cancel(cmd);
-    for (const ev of events) await log.append(ev);
+    const events = state.engine.cancel(cmd);
+    for (const ev of events) await state.log.append(ev);
     return { events: eventsToJsonReadyArray(events) };
   });
+
+  if (ADMIN_ENABLED) {
+    app.post('/admin/reset', async () => {
+      resetting = true;
+      try {
+        await redis.del(STREAM_KEY);
+        state.engine = new MatchingEngine();
+        state.log = new EventLog(redis, STREAM_KEY);
+        console.log('[engine] /admin/reset — book + stream cleared');
+        return { ok: true, seq: 0 };
+      } finally {
+        resetting = false;
+      }
+    });
+  }
 
   await app.listen({ port: PORT, host: '0.0.0.0' });
   console.log(`[engine] listening on http://localhost:${PORT}`);

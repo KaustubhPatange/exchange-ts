@@ -8,6 +8,7 @@ import { consumeEngineStream } from './streamConsumer.js';
 
 const PORT = Number(process.env.LEDGER_PORT ?? 8081);
 const REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6379';
+const ADMIN_ENABLED = process.env.EXCHANGE_ADMIN_ENABLED === '1';
 
 interface ReserveBody {
   userId: string;
@@ -32,30 +33,44 @@ async function main(): Promise<void> {
   const redis = new IORedis(REDIS_URL, { maxRetriesPerRequest: null });
   const accounts = new Accounts();
   const settler = new Settler(accounts);
+  let resetting = false;
 
-  // Kick off the stream consumer in the background. It runs forever and
-  // re-applies engine events to balances.
-  void (async (): Promise<void> => {
-    let replayed = 0;
-    let liveStarted = false;
-    for await (const item of consumeEngineStream(redis)) {
-      if (item.mode === 'live' && !liveStarted) {
-        liveStarted = true;
-        console.log(
-          `[ledger] replay done after ${replayed} events; switching to LIVE`
-        );
-      }
+  // Dedicated client for the blocking XREAD loop. We disconnect this one
+  // (not the request-handling `redis`) when /admin/reset wants to abort the
+  // consumer mid-XREAD.
+  let consumerRedis = new IORedis(REDIS_URL, { maxRetriesPerRequest: null });
+  let consumerPromise = startConsumer();
+
+  function startConsumer(): Promise<void> {
+    return (async (): Promise<void> => {
+      let replayed = 0;
+      let liveStarted = false;
       try {
-        settler.apply(item.event, item.mode);
+        for await (const item of consumeEngineStream(consumerRedis)) {
+          if (item.mode === 'live' && !liveStarted) {
+            liveStarted = true;
+            console.log(
+              `[ledger] replay done after ${replayed} events; switching to LIVE`
+            );
+          }
+          try {
+            settler.apply(item.event, item.mode);
+          } catch (err) {
+            console.error(
+              `[ledger] settle error on seq ${item.event.seq}:`,
+              (err as Error).message
+            );
+          }
+          if (item.mode === 'replay') replayed += 1;
+        }
       } catch (err) {
-        console.error(
-          `[ledger] settle error on seq ${item.event.seq}:`,
-          (err as Error).message
-        );
+        // Disconnect during reset surfaces here; the reset path handles it.
+        if (!resetting) throw err;
       }
-      if (item.mode === 'replay') replayed += 1;
-    }
-  })().catch((err) => {
+    })();
+  }
+
+  consumerPromise.catch((err) => {
     console.error('[ledger] stream consumer crashed:', err);
     process.exit(1);
   });
@@ -70,6 +85,10 @@ async function main(): Promise<void> {
   });
 
   app.post('/reserve', async (req, reply) => {
+    if (resetting) {
+      reply.code(503);
+      return { ok: false, error: 'RESETTING' };
+    }
     const body = req.body as ReserveBody;
     try {
       accounts.reserve(body.userId, body.asset, BigInt(body.amount));
@@ -90,6 +109,10 @@ async function main(): Promise<void> {
   });
 
   app.post('/release', async (req, reply) => {
+    if (resetting) {
+      reply.code(503);
+      return { ok: false, error: 'RESETTING' };
+    }
     const body = req.body as ReleaseBody;
     try {
       accounts.release(body.userId, body.asset, BigInt(body.amount));
@@ -100,13 +123,34 @@ async function main(): Promise<void> {
     }
   });
 
+  if (ADMIN_ENABLED) {
+    app.post('/admin/reset', async () => {
+      resetting = true;
+      try {
+        consumerRedis.disconnect();
+        await consumerPromise.catch(() => {});
+        accounts.clear();
+        consumerRedis = new IORedis(REDIS_URL, { maxRetriesPerRequest: null });
+        consumerPromise = startConsumer();
+        consumerPromise.catch((err) => {
+          console.error('[ledger] stream consumer crashed after reset:', err);
+          process.exit(1);
+        });
+        console.log('[ledger] /admin/reset — balances cleared, consumer restarted');
+        return { ok: true };
+      } finally {
+        resetting = false;
+      }
+    });
+  }
+
   await app.listen({ port: PORT, host: '0.0.0.0' });
   console.log(`[ledger] listening on http://localhost:${PORT}`);
 
   const shutdown = async (sig: string): Promise<void> => {
     console.log(`[ledger] ${sig} — shutting down`);
     await app.close();
-    await redis.quit();
+    await Promise.all([redis.quit(), consumerRedis.quit().catch(() => {})]);
     process.exit(0);
   };
   process.on('SIGINT', () => void shutdown('SIGINT'));

@@ -34,4 +34,8 @@ export class Tape {
     const n = Math.min(limit, this.ring.length);
     return this.ring.slice(this.ring.length - n);
   }
+
+  clear(): void {
+    this.ring.length = 0;
+  }
 }

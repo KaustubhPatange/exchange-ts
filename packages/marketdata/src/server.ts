@@ -1,25 +1,24 @@
 import Fastify from 'fastify';
 import IORedis from 'ioredis';
-import {
-  type EngineEvent,
-  deserializeEvent,
-} from '@exchange/common';
+import type { EngineEvent } from '@exchange/common';
 
 import { L2Book, type L2Delta } from './l2book.js';
 import { Tape } from './tape.js';
 import { CandleAggregator, type CandleEvent } from './candles.js';
 import { computeTicker } from './ticker.js';
+import { consumeEngineStream } from './streamConsumer.js';
 
 const PORT = Number(process.env.MARKETDATA_PORT ?? 8083);
 const REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6379';
-const STREAM_KEY = 'engine.events';
+const ADMIN_ENABLED = process.env.EXCHANGE_ADMIN_ENABLED === '1';
 
 const ONE_MIN_MS = 60_000;
 const FIVE_MIN_MS = 5 * ONE_MIN_MS;
 
 async function main(): Promise<void> {
   const pub = new IORedis(REDIS_URL, { maxRetriesPerRequest: null });
-  const cmd = new IORedis(REDIS_URL, { maxRetriesPerRequest: null });
+  let consumerRedis = new IORedis(REDIS_URL, { maxRetriesPerRequest: null });
+  let resetting = false;
 
   const l2 = new L2Book();
   const tape = new Tape(500);
@@ -67,59 +66,32 @@ async function main(): Promise<void> {
     }
   }
 
-  // ---- Stream consumer (replay → live) ----
+  // ---- Stream consumer ----
 
-  void (async (): Promise<void> => {
-    let cursor: string = '-';
-    let replayed = 0;
-    const PAGE = 1000;
-    // REPLAY
-    while (true) {
-      const result = (await cmd.xrange(STREAM_KEY, cursor, '+', 'COUNT', PAGE)) as [
-        string,
-        string[]
-      ][];
-      if (!result || result.length === 0) break;
-      for (const [id, fields] of result) {
-        const idx = fields.indexOf('data');
-        if (idx >= 0) {
-          const ev = deserializeEvent(fields[idx + 1]!);
-          await applyEvent(ev);
-          replayed += 1;
-        }
-        cursor = `(${id}`;
-      }
-      if (result.length < PAGE) break;
-    }
-    let lastId = cursor.startsWith('(') ? cursor.slice(1) : '0';
-    console.log(`[marketdata] replayed ${replayed} events; switching to LIVE`);
-    await publishL2Snapshot();
-
-    // LIVE
-    while (true) {
-      const reply = (await cmd.call(
-        'XREAD',
-        'BLOCK',
-        '0',
-        'COUNT',
-        '100',
-        'STREAMS',
-        STREAM_KEY,
-        lastId
-      )) as [string, [string, string[]][]][] | null;
-      if (!reply) continue;
-      for (const [, entries] of reply) {
-        for (const [id, fields] of entries) {
-          const idx = fields.indexOf('data');
-          if (idx >= 0) {
-            const ev = deserializeEvent(fields[idx + 1]!);
-            await applyEvent(ev);
+  function startConsumer(): Promise<void> {
+    return (async (): Promise<void> => {
+      let replayed = 0;
+      let liveStarted = false;
+      try {
+        for await (const item of consumeEngineStream(consumerRedis)) {
+          if (item.mode === 'live' && !liveStarted) {
+            liveStarted = true;
+            console.log(
+              `[marketdata] replay done after ${replayed} events; switching to LIVE`
+            );
+            await publishL2Snapshot();
           }
-          lastId = id;
+          await applyEvent(item.event);
+          if (item.mode === 'replay') replayed += 1;
         }
+      } catch (err) {
+        if (!resetting) throw err;
       }
-    }
-  })().catch((err) => {
+    })();
+  }
+
+  let consumerPromise = startConsumer();
+  consumerPromise.catch((err) => {
     console.error('[marketdata] stream consumer crashed:', err);
     process.exit(1);
   });
@@ -166,13 +138,39 @@ async function main(): Promise<void> {
 
   app.get('/ticker', async () => computeTicker(aggs['1m']));
 
+  if (ADMIN_ENABLED) {
+    app.post('/admin/reset', async () => {
+      resetting = true;
+      try {
+        consumerRedis.disconnect();
+        await consumerPromise.catch(() => {});
+        l2.clear();
+        tape.clear();
+        aggs['1m'].clear();
+        aggs['5m'].clear();
+        consumerRedis = new IORedis(REDIS_URL, { maxRetriesPerRequest: null });
+        consumerPromise = startConsumer();
+        consumerPromise.catch((err) => {
+          console.error('[marketdata] stream consumer crashed after reset:', err);
+          process.exit(1);
+        });
+        await publishL2Snapshot();
+        await publishTicker();
+        console.log('[marketdata] /admin/reset — projections cleared, consumer restarted');
+        return { ok: true };
+      } finally {
+        resetting = false;
+      }
+    });
+  }
+
   await app.listen({ port: PORT, host: '0.0.0.0' });
   console.log(`[marketdata] listening on http://localhost:${PORT}`);
 
   const shutdown = async (sig: string): Promise<void> => {
     console.log(`[marketdata] ${sig} — shutting down`);
     await app.close();
-    await Promise.all([pub.quit(), cmd.quit()]);
+    await Promise.all([pub.quit(), consumerRedis.quit().catch(() => {})]);
     process.exit(0);
   };
   process.on('SIGINT', () => void shutdown('SIGINT'));
