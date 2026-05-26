@@ -203,7 +203,11 @@ Order matters. The engine resets first because it owns the source-of-truth strea
 
 ## What is not modeled
 
-It is worth being explicit about this. This is a learning project, not a venue.
+For reference, a real exchange's high-level design and the components around the matching engine look roughly like this:
+
+![Real exchange HLD](assets/real-exchange.png)
+
+This project covers only a small slice of that picture. It is worth being explicit about what is missing. This is a learning project, not a venue.
 
 - No persistence beyond Redis. Restart Redis and you start clean.
 - No deposits or withdrawals. Every user appears with a generous endowment on first contact.
