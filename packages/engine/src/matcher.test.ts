@@ -293,6 +293,22 @@ describe('FOK', () => {
     );
     expect(rejected(evs)[0]?.reason).toBe('FOK_NOT_FILLABLE');
   });
+
+  it('rejects when a same-user order sits mid-level and STP would stop the fill', () => {
+    // Same price level, time order: other(0.3), self(0.5), other(1.0).
+    // Match consumes the first other, then hits the self order → STP stops.
+    // Only 0.3 fillable < 1.0, so FOK must reject despite the trailing 1.0.
+    eng.submit(mkCmd({ userId: 'a', side: 'sell', price: PRICE(100), qty: QTY(0.3) }));
+    eng.submit(mkCmd({ userId: 't', side: 'sell', price: PRICE(100), qty: QTY(0.5) }));
+    eng.submit(mkCmd({ userId: 'b', side: 'sell', price: PRICE(100), qty: QTY(1) }));
+    const evs = eng.submit(
+      mkCmd({ userId: 't', side: 'buy', type: 'FOK', price: PRICE(100), qty: QTY(1) })
+    );
+    expect(rejected(evs)[0]?.reason).toBe('FOK_NOT_FILLABLE');
+    expect(trades(evs)).toHaveLength(0);
+    // Book untouched.
+    expect(eng.book.bestAsk()).toBe(PRICE(100));
+  });
 });
 
 describe('POST_ONLY', () => {
