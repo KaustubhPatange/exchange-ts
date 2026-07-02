@@ -234,17 +234,13 @@ export class MatchingEngine {
         (order.side === 'buy' ? order.price >= price : order.price <= price);
       if (!crosses) break;
 
-      let node = level.head;
-      while (node) {
-        if (node.order.userId !== order.userId) {
-          available += node.order.remaining;
-          if (available >= order.qty) return true;
-        } else {
-          // Same-user resting at the FRONT — under cancel-new STP, matching
-          // would stop here. So FOK cannot fill past this point.
-          if (node === level.head && available < order.qty) return false;
-        }
-        node = node.next;
+      // Match consumes orders in price-time order. The first same-user order
+      // trips cancel-new STP and stops the whole match, so we can never fill
+      // past it — no matter where in the level it sits.
+      for (let node = level.head; node; node = node.next) {
+        if (node.order.userId === order.userId) return false;
+        available += node.order.remaining;
+        if (available >= order.qty) return true;
       }
     }
     return available >= order.qty;
