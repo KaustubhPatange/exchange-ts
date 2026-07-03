@@ -11,16 +11,16 @@ type EngineEvent interface {
 }
 
 type OrderAcceptedEvent struct {
-	Seq   int64
-	TS    int64
-	Order *Order
+	Seq   int64  `json:"seq"`
+	TS    int64  `json:"ts"`
+	Order *Order `json:"order"`
 }
 
 func (e *OrderAcceptedEvent) Kind() string { return "OrderAccepted" }
 
 func (e *OrderAcceptedEvent) Serialize() (string, error) {
 	return marshalTagged(struct {
-		Kind string
+		Kind string `json:"kind"`
 		*OrderAcceptedEvent
 	}{e.Kind(), e})
 }
@@ -37,18 +37,18 @@ const (
 )
 
 type OrderRejectedEvent struct {
-	Seq           int64
-	TS            int64
-	ClientOrderID string
-	UserID        string
-	Reason        RejectReason
+	Seq           int64        `json:"seq"`
+	TS            int64        `json:"ts"`
+	ClientOrderID string       `json:"clientOrderId"`
+	UserID        string       `json:"userId"`
+	Reason        RejectReason `json:"reason"`
 }
 
 func (e *OrderRejectedEvent) Kind() string { return "OrderRejected" }
 
 func (e *OrderRejectedEvent) Serialize() (string, error) {
 	return marshalTagged(struct {
-		Kind string
+		Kind string `json:"kind"`
 		*OrderRejectedEvent
 	}{e.Kind(), e})
 }
@@ -63,46 +63,46 @@ const (
 )
 
 type OrderCanceledEvent struct {
-	Seq       int64
-	TS        int64
-	OrderID   string
-	UserID    string
-	Symbol    Symbol
-	Side      Side
-	Price     int64
-	Remaining int64
-	Reason    CancelReason
+	Seq       int64        `json:"seq"`
+	TS        int64        `json:"ts"`
+	OrderID   string       `json:"orderId"`
+	UserID    string       `json:"userId"`
+	Symbol    Symbol       `json:"symbol"`
+	Side      Side         `json:"side"`
+	Price     int64        `json:"price,string"`
+	Remaining int64        `json:"remaining,string"`
+	Reason    CancelReason `json:"reason"`
 }
 
 func (e *OrderCanceledEvent) Kind() string { return "OrderCanceled" }
 
 func (e *OrderCanceledEvent) Serialize() (string, error) {
 	return marshalTagged(struct {
-		Kind string
+		Kind string `json:"kind"`
 		*OrderCanceledEvent
 	}{e.Kind(), e})
 }
 
 type TradeEvent struct {
-	Seq            int64
-	TS             int64
-	TradeID        string
-	Symbol         Symbol
-	Price          int64
-	Qty            int64
-	Aggressor      Side
-	TakerOrderID   string
-	TakerUserID    string
-	TakerOrderType OrderType
-	MakerOrderID   string
-	MakerUserID    string
+	Seq            int64     `json:"seq"`
+	TS             int64     `json:"ts"`
+	TradeID        string    `json:"tradeId"`
+	Symbol         Symbol    `json:"symbol"`
+	Price          int64     `json:"price,string"`
+	Qty            int64     `json:"qty,string"`
+	Aggressor      Side      `json:"aggressor"`
+	TakerOrderID   string    `json:"takerOrderId"`
+	TakerUserID    string    `json:"takerUserId"`
+	TakerOrderType OrderType `json:"takerOrderType"`
+	MakerOrderID   string    `json:"makerOrderId"`
+	MakerUserID    string    `json:"makerUserId"`
 }
 
 func (e *TradeEvent) Kind() string { return "Trade" }
 
 func (e *TradeEvent) Serialize() (string, error) {
 	return marshalTagged(struct {
-		Kind string
+		Kind string `json:"kind"`
 		*TradeEvent
 	}{e.Kind(), e})
 }
@@ -117,7 +117,7 @@ func marshalTagged(v any) (string, error) {
 
 func DeserializeEvent(data string) (EngineEvent, error) {
 	var raw struct {
-		Kind string `json:"Kind"`
+		Kind string `json:"kind"`
 	}
 	if err := json.Unmarshal([]byte(data), &raw); err != nil {
 		return nil, err
