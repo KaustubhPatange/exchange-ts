@@ -78,8 +78,8 @@ func StartConsumer(
 
 func (h *ConsumerHandle) Stop() {
 	h.cancel()
-	<-h.Done
 	h.client.Close()
+	<-h.Done
 }
 
 func WatchConsumer(h *ConsumerHandle, tag string, resetting *atomic.Bool) {
