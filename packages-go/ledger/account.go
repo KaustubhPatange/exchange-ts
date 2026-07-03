@@ -72,8 +72,8 @@ func (a *Accounts) Release(userID string, asset common.Asset, amount int64) erro
 	if bal.Locked < amount {
 		return fmt.Errorf("release: user %s has locked %d < %d %s", userID, bal.Locked, amount, asset)
 	}
-	bal.Free -= amount
-	bal.Locked += amount
+	bal.Locked -= amount
+	bal.Free += amount
 	return nil
 }
 
