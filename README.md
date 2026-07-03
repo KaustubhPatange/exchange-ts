@@ -35,6 +35,18 @@ pnpm simulation
 
 Use `pnpm reset` to wipe all in-memory state (orders, trades, candles, balances) and clear the engine event stream.
 
+### TypeScript vs Go backend
+
+The four backend services (engine, ledger, gateway, market-data) come in two interchangeable implementations that speak the same wire format over the same Redis event stream, so the React UI and simulation CLI work against either.
+
+| | TypeScript | Go |
+| -- | -- | -- |
+| Source | `packages/` | `packages-go/` |
+| Run | `pnpm dev` | `pnpm dev:go` |
+| Build | `pnpm build` | `pnpm build:go` |
+
+Both commands also start the same React UI (`http://localhost:5173`). Pick one backend at a time — they bind the same ports. The UI and simulation packages are TypeScript only.
+
 ### Contributing
 
 I believe the exchange itself is correct as a demonstration. The matching loop, ledger settlement, and market-data projections all behave the way real systems do at this scale. The contribution most likely to be useful is **more simulation examples** under `packages/simulation/src/examples/`, since that is where the project gets the most active use and where new teaching value is easiest to add without touching the core.
