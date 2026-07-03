@@ -15,10 +15,10 @@ var (
 func WriteError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, ErrNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusNotFound, gin.H{"ok": false, "error": err.Error()})
 	case errors.Is(err, ErrConflict):
-		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		c.JSON(http.StatusConflict, gin.H{"ok": false, "error": err.Error()})
 	default:
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"ok": false, "error": err.Error()})
 	}
 }
