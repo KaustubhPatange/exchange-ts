@@ -131,7 +131,7 @@ func (o *OrderBook) PeekTopOrder(side common.Side) *common.Order {
 	if !ok {
 		return nil
 	}
-	if top.level.Head != nil {
+	if top.level.Head == nil {
 		return nil
 	}
 	return top.level.Head.Order
