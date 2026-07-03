@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -36,19 +37,38 @@ type PlaceOrderBody struct {
 	Symbol        common.Symbol    `json:"symbol" binding:"required"`
 	Side          common.Side      `json:"side" binding:"required"`
 	Type          common.OrderType `json:"type" binding:"required"`
-	Price         int64            `json:"price"`
-	Qty           int64            `json:"qty" binding:"required"`
+	Price         string           `json:"price"`
+	Qty           string           `json:"qty" binding:"required"`
+}
+
+func parseInt64(value, field string) (int64, error) {
+	if value == "" {
+		return 0, nil
+	}
+	n, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid int64 for %s: %s", field, value)
+	}
+	return n, nil
 }
 
 func toEngineCommand(body *PlaceOrderBody) (*common.NewOrderCommand, error) {
+	price, err := parseInt64(body.Price, "price")
+	if err != nil {
+		return nil, err
+	}
+	qty, err := parseInt64(body.Qty, "qty")
+	if err != nil {
+		return nil, err
+	}
 	return &common.NewOrderCommand{
 		ClientOrderID: body.ClientOrderID,
 		UserID:        body.UserID,
 		Symbol:        body.Symbol,
 		Side:          body.Side,
 		Type:          body.Type,
-		Price:         body.Price,
-		Qty:           body.Qty,
+		Price:         price,
+		Qty:           qty,
 	}, nil
 }
 
