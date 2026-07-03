@@ -46,17 +46,17 @@ const (
 // USDC base units per 1 BTC). This keeps multiplication clean:
 // notional = price * qty / BASE_ONE.
 type Order struct {
-	OrderID       string // server-assigned ULID
-	ClientOrderID string // client-supplied for idempotency
-	UserID        string
-	Symbol        Symbol
-	Side          Side
-	Type          OrderType
-	Price         int64 // nil/0 for MARKET
-	Qty           int64 // original quantity (base asset base units)
-	Remaining     int64 // unfilled remaining
-	Status        OrderStatus
-	CreatedAt     int64 // ms epoch
+	OrderID       string      `json:"orderId"`       // server-assigned ULID
+	ClientOrderID string      `json:"clientOrderId"` // client-supplied for idempotency
+	UserID        string      `json:"userId"`
+	Symbol        Symbol      `json:"symbol"`
+	Side          Side        `json:"side"`
+	Type          OrderType   `json:"type"`
+	Price         int64       `json:"price,string"`     // nil/0 for MARKET
+	Qty           int64       `json:"qty,string"`       // original quantity (base asset base units)
+	Remaining     int64       `json:"remaining,string"` // unfilled remaining
+	Status        OrderStatus `json:"status"`
+	CreatedAt     int64       `json:"createdAt"` // ms epoch
 }
 
 // NewOrderCommand represents a request to place a new order.

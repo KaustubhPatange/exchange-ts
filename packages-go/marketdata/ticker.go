@@ -37,44 +37,30 @@ func ComputeTicker(oneMin *CandleAggregator) TickerSnapshot {
 	last := candles[len(candles)-1]
 	first := candles[0]
 
-	high, err := strconv.ParseInt(first.High, 10, 64)
-	if err != nil {
-		panic(err)
-	}
-	low, err := strconv.ParseInt(first.Low, 10, 64)
-	if err != nil {
-		panic(err)
-	}
+	high := first.High
+	low := first.Low
 	var vol int64
 	for _, c := range candles {
-		h, _ := strconv.ParseInt(c.High, 10, 64)
-		l, _ := strconv.ParseInt(c.Low, 10, 64)
-		if h > high {
-			high = h
+		if c.High > high {
+			high = c.High
 		}
-		if l < low {
-			low = l
+		if c.Low < low {
+			low = c.Low
 		}
-		v, _ := strconv.ParseInt(c.Volume, 10, 64)
-		vol += v
+		vol += c.Volume
 	}
-
-	open, _ := strconv.ParseInt(first.Open, 10, 64)
-	close_, _ := strconv.ParseInt(last.Close, 10, 64)
 
 	// changePct as a fixed-point with 4 decimals: e.g. "12.3456" %.
 	// (close - open) / open * 100 — done in scaled integers.
 	var scaled int64
-	if open > 0 {
-		scaled = ((close_ - open) * common.UsdcOne) / open // 4-dec * 100
+	if first.Open > 0 {
+		scaled = ((last.Close - first.Open) * common.UsdcOne) / first.Open // 4-dec * 100
 	}
 	changePct := formatScaledPercent(scaled)
 
-	lastClose := last.Close
-	firstOpen := first.Open
 	return TickerSnapshot{
-		LastPrice:    &lastClose,
-		Open24h:      &firstOpen,
+		LastPrice:    strconvPtr(last.Close),
+		Open24h:      strconvPtr(first.Open),
 		High24h:      strconvPtr(high),
 		Low24h:       strconvPtr(low),
 		Volume24h:    strconv.FormatInt(vol, 10),
