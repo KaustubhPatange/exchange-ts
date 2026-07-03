@@ -1,13 +1,12 @@
-package main
+package engine
 
 import (
 	"context"
 
 	"github.com/KaustubhPatange/exchange/common"
+	redisExt "github.com/KaustubhPatange/exchange/common/redis"
 	"github.com/redis/go-redis/v9"
 )
-
-const DefaultStreamKey = "engine.events"
 
 type EventLog struct {
 	redis     *redis.Client
@@ -17,7 +16,7 @@ type EventLog struct {
 func NewEventLog(r *redis.Client) *EventLog {
 	return &EventLog{
 		redis:     r,
-		streamKey: DefaultStreamKey,
+		streamKey: redisExt.DefaultStreamKey,
 	}
 }
 
@@ -50,7 +49,7 @@ func (e *EventLog) ReadAll(ctx context.Context) (<-chan common.EngineEvent, <-ch
 		page := int64(1000)
 
 		for {
-			result, err := e.redis.XRangeN(ctx, DefaultStreamKey, from, "+", page).Result()
+			result, err := e.redis.XRangeN(ctx, redisExt.DefaultStreamKey, from, "+", page).Result()
 			if err != nil {
 				errs <- err
 				return
