@@ -1,4 +1,4 @@
-package ledger
+package main
 
 import (
 	"github.com/KaustubhPatange/exchange/common"
