@@ -25,7 +25,7 @@ func NewTape(capacity int) *Tape {
 	if capacity == 0 {
 		capacity = 200
 	}
-	return &Tape{capacity: capacity}
+	return &Tape{capacity: capacity, ring: make([]TapeEntry, 0, capacity)}
 }
 
 func (t *Tape) Push(ev *common.TradeEvent) TapeEntry {
@@ -49,5 +49,5 @@ func (t *Tape) Recent(limit int) []TapeEntry {
 }
 
 func (t *Tape) Clear() {
-	t.ring = nil
+	t.ring = make([]TapeEntry, 0, t.capacity)
 }
