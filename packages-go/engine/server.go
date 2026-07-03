@@ -1,4 +1,4 @@
-package engine
+package main
 
 import (
 	"context"
@@ -13,6 +13,7 @@ import (
 
 	"github.com/KaustubhPatange/exchange/common"
 	"github.com/KaustubhPatange/exchange/common/api"
+	redisExt "github.com/KaustubhPatange/exchange/common/redis"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 )
@@ -210,7 +211,7 @@ func main() {
 			defer func() { resetting = false }()
 
 			ctx := c.Request.Context()
-			if err := client.Del(ctx, DefaultStreamKey).Err(); err != nil {
+			if err := client.Del(ctx, redisExt.DefaultStreamKey).Err(); err != nil {
 				c.JSON(500, &gin.H{"error": err.Error()})
 				return
 			}
@@ -222,7 +223,7 @@ func main() {
 				c.JSON(500, &gin.H{"error": err.Error()})
 				return
 			}
-			if err := client.Publish(ctx, DefaultStreamKey+".live", sentinel).Err(); err != nil {
+			if err := client.Publish(ctx, redisExt.DefaultStreamKey+".live", sentinel).Err(); err != nil {
 				c.JSON(500, &gin.H{"error": err.Error()})
 				return
 			}
